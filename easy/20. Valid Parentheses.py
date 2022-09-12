@@ -14,6 +14,8 @@ class Solution:
                     if result[-1] == '(' and s[0] == check[0] or result[-1] == '{' and s[0] == check[1] or \
                             result[-1] == '[' and s[0] == check[2]:
                         result.pop()
+                    else:
+                        return False
                 else:
                     return False
             elif s[0] in ['(', '{', '[']:
@@ -24,4 +26,7 @@ class Solution:
         else:
             return False
 
+
 print(Solution().isValid(s))
+
+# Not Done Yet ✅
