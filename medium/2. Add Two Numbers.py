@@ -7,28 +7,16 @@ list2 = [9, 9, 9, 9]
 
 class Solution:
     def addTwoNumbers(self, l1, l2):
-        l1.reverse()
-        l2.reverse()
-
-        l1_int = ''
-        l2_int = ''
-
-        for x in l1:
-            l1_int += str(x)
-
-        for x in l2:
-            l2_int += str(x)
-
-        l1_int = int(l1_int)
-        l2_int = int(l2_int)
-
-        result = str(l1_int + l2_int)
+        rl1 = ''
+        for x in range(len(l1) - 1, -1, -1):
+            rl1 += str(l1[x])
+        rl2 = ''
+        for x in range(len(l2) - 1, -1, -1):
+            rl2 += str(l2[x])
+        result = str(int(rl1) + int(rl2))
         ans = []
-
-        for x in result:
-            ans.append(int(x))
-
-        ans.reverse()
+        for x in range(len(result) - 1, -1, -1):
+            ans.append(int(result[x]))
         return ans
 
 
