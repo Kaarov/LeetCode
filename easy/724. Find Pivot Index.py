@@ -15,3 +15,5 @@ class Solution(object):
 
 test = Solution()
 print(test.pivotIndex(numbers))
+
+# Done ✅
