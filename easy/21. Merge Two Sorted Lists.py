@@ -1,5 +1,5 @@
-list1 = [1, 2, 4]
-list2 = [1, 3, 4]
+# list1 = [1, 2, 4]
+# list2 = [1, 3, 4]
 
 
 # Definition for singly-linked list.
@@ -13,7 +13,8 @@ class ListNode:
 
 class Solution:
     def mergeTwoLists(self, l1, l2):
-        dummy = temp = ListNode(0)
+        dump = temp = ListNode(0)
+
         while l1 != None and l2 != None:
 
             if l1.val < l2.val:
@@ -24,7 +25,23 @@ class Solution:
                 l2 = l2.next
             temp = temp.next
         temp.next = l1 or l2
-        return dummy.next
+        return dump.next
+
+        # list3 = ListNode()
+        #
+        # while l1.next != None or l2.next != None:
+        #     if l1.val <= l2.val and l1.next != None:
+        #         l_val = l1.val
+        #         l1 = l1.next
+        #     elif l1.val > l2.val and l2.next != None:
+        #         l_val = l2.val
+        #         l2 = l2.next
+        #
+        #     l = ListNode()
+        #     l.val = l_val
+        #     l.next = list3
+        #     list3 = l
+        # return list3
 
 
 node3 = ListNode(4, None)
