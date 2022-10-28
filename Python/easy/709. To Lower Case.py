@@ -8,3 +8,5 @@ class Solution:
 
 slt = Solution()
 print(slt.toLowerCase(string))
+
+# Done ✅
