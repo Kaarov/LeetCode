@@ -1,6 +1,7 @@
 .idea/
 /.env
 /.env.prod
+/venv
 
 .pytest_cache/
 __pycache__/
