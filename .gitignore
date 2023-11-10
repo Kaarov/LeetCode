@@ -1,0 +1,6 @@
+.idea/
+/.env
+/.env.prod
+
+.pytest_cache/
+__pycache__/
