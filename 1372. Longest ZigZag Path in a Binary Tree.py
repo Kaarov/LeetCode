@@ -7,37 +7,23 @@ class TreeNode:
         self.val = val
         self.left = left
         self.right = right
+        self.maxLength = 0
 
 
 class Solution:
-    def zigZag(self, root: Optional[TreeNode], flag: bool):
-        stack = [root]
-        ans = 0
-        while stack:
-            current = stack.pop()
-            if flag:
-                if current.left:
-                    stack.append(current.left)
-                    ans += 1
-            else:
-                if current.right:
-                    stack.append(current.right)
-                    ans += 1
-            flag = not flag
-        return ans
-
     def longestZigZag(self, root: Optional[TreeNode]) -> int:
-        if not root: return 0
-        stack = [root]
-        ans = 0
+        self.maxLength = 0
 
-        while stack:
-            current = stack.pop()
-            ans = max(ans, self.zigZag(current, True), self.zigZag(current, False))
-            if current.left: stack.append(current.left)
-            if current.right: stack.append(current.right)
+        def solve(node, deep, dir):
+            self.maxLength = max(self.maxLength, deep)
 
-        return ans
+            if node.left is not None:
+                solve(node.left, deep + 1, 'left') if dir != 'left' else solve(node.left, 1, 'left')
+            if node.right is not None:
+                solve(node.right, deep + 1, 'right') if dir != 'right' else solve(node.right, 1, 'right')
+
+        solve(root, 0, '')
+        return self.maxLength
 
 
 treeNode1 = TreeNode()
