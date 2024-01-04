@@ -12,3 +12,5 @@ class Solution:
 
 slt = Solution()
 print(slt.tribonacci(n))
+
+# Done ✅
