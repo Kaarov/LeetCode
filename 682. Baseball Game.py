@@ -19,3 +19,5 @@ class Solution:
 ops = ["5", "2", "C", "D", "+"]
 slt = Solution()
 print(slt.calPoints(ops))
+
+# Done ✅
