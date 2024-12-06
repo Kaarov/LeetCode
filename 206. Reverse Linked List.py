@@ -1,7 +1,6 @@
 from typing import Optional
 
 
-# Definition for singly-linked list.
 class ListNode:
     def __init__(self, val=0, next=None):
         self.val = val
@@ -20,5 +19,15 @@ class Solution:
             cur = next
 
         return prev
+
+
+node4 = ListNode(5, None)
+node3 = ListNode(4, node4)
+node2 = ListNode(3, node3)
+node1 = ListNode(2, node2)
+head = ListNode(1, node1)
+
+slt = Solution()
+print(slt.reverseList(head))
 
 # Done ✅
