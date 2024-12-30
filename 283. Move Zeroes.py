@@ -1,7 +1,5 @@
 from typing import List
 
-nums = [0, 0, 1]
-
 
 class Solution:
     def moveZeroes(self, nums: List[int]) -> None:
@@ -14,5 +12,12 @@ class Solution:
                     nums[j], nums[j + 1] = nums[j + 1], nums[j]
             else:
                 i += 1
+
+
+if __name__ == "__main__":
+    nums = [0, 0, 1]
+    slt = Solution()
+    slt.moveZeroes(nums)
+    print(nums)
 
 # Done ✅
