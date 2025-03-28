@@ -4,6 +4,11 @@ from collections import Counter
 
 class Solution:
     def findLHS(self, nums: List[int]) -> int:
+        # Version 1
+        # c = Counter(nums)
+        # return max((c[key] + c[key + 1] for key in c if key + 1 in c), default=0)
+
+        # Version 2
         c = Counter(nums)
         num_set = c.keys()
         ans = 0
