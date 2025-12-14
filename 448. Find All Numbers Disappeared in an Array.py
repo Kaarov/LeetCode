@@ -9,5 +9,7 @@ class Solution:
 
 if __name__ == '__main__':
     slt = Solution()
-    print(slt.findDisappearedNumbers([4, 3, 2, 7, 8, 2, 3, 1]))  # [5, 6]
-    print(slt.findDisappearedNumbers([1, 1]))  # 2
+    assert slt.findDisappearedNumbers([4, 3, 2, 7, 8, 2, 3, 1]) == [5, 6]
+    assert slt.findDisappearedNumbers([1, 1]) == [2]
+
+# Done ✅
