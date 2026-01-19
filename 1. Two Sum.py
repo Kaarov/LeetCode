@@ -1,18 +1,17 @@
-from typing import List
-
-numbers = [2, 7, 11, 15]
-tar = 9
-
-
 class Solution:
-    def twoSum(self, nums: List[int], target: int) -> List[int]:
-        for i in range(len(nums) - 1):
-            for j in range(i + 1, len(nums)):
-                if nums[i] + nums[j] == target:
-                    return [i, j]
+    def twoSum(self, nums: list[int], target: int) -> list[int]:
+        numbers = {}
+
+        for i in range(len(nums)):
+            if nums[i] in numbers:
+                return [numbers[nums[i]], i]
+            numbers[target - nums[i]] = i
 
 
-slt = Solution()
-print(slt.twoSum(numbers, tar))
+if __name__ == "__main__":
+    slt = Solution()
+    assert slt.twoSum([2, 7, 11, 15], 9) == [0, 1]
+    assert slt.twoSum([3, 2, 4], 6) == [1, 2]
+    assert slt.twoSum([3, 3], 6) == [0, 1]
 
 # Done ✅
