@@ -13,31 +13,269 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 4. [Probabilistic and Approximation Algorithms](#probabilistic-and-approximation-algorithms)
 
 ### Part II: Core Algorithms
-5. [Sorting Algorithms](#sorting-algorithms)
-6. [Searching Algorithms](#searching-algorithms)
-7. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-8. [Array Algorithms](#array-algorithms)
-9. [Graph Algorithms](#graph-algorithms)
+5. [Binary Search Algorithm](#binary-search-algorithm)
+6. [Sorting Algorithms](#sorting-algorithms)
+7. [Searching Algorithms](#searching-algorithms)
+8. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+9. [Array Algorithms](#array-algorithms)
+10. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-10. [Fundamental Data Structures](#fundamental-data-structures)
+11. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-11. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-12. [Optimization Techniques](#optimization-techniques)
-13. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-14. [Cryptographic Algorithms](#cryptographic-algorithms)
-15. [Data Compression Algorithms](#data-compression-algorithms)
-16. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-17. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-18. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-19. [Specialized Application Algorithms](#specialized-application-algorithms)
+12. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+13. [Optimization Techniques](#optimization-techniques)
+14. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+15. [Cryptographic Algorithms](#cryptographic-algorithms)
+16. [Data Compression Algorithms](#data-compression-algorithms)
+17. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+18. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+19. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+20. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-20. [Solved Problems Index](#solved-problems-index)
+21. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-21. [Further Reading and Study Resources](#further-reading-and-study-resources)
+22. [Further Reading and Study Resources](#further-reading-and-study-resources)
+
+---
+
+## Binary Search Algorithm
+
+**Binary search** finds a target value in a **sorted** array (or in a range with a **monotonic** condition) by repeatedly comparing the target to the middle element and discarding the half where it cannot lie. Each step halves the search space, giving **O(log n)** time and **O(1)** space (iterative) or **O(log n)** space (recursive).
+
+### How it works
+
+1. Maintain a range `[left, right]` that is guaranteed to contain the answer (or the insertion point).
+2. Compute `mid = left + (right - left) // 2` (avoids overflow in other languages; in Python `(left + right) // 2` is fine).
+3. Compare `arr[mid]` with the target and shrink the range:
+   - If `arr[mid] == target` → found (for “find exact”).
+   - If `arr[mid] < target` → search right: `left = mid + 1`.
+   - If `arr[mid] > target` → search left: `right = mid - 1` (or `right = mid` when using “first position ≥ target” style).
+4. Stop when the range is empty or reduced to one position, depending on the variant.
+
+**Loop invariant (classic “find target”):** If `target` is in the array, then it lies in `[left, right]`. When `left > right`, the target is not present.
+
+### When to use
+
+- The array (or the **value space** you’re searching) is **sorted** or has a **monotonic** property (e.g. “first index where condition becomes true”).
+- Typical tasks:
+  - Find an exact value.
+  - Find **insertion index** (where to insert to keep order).
+  - Find **first** or **last** occurrence of a value.
+  - **Binary search on the answer**: find the smallest (or largest) value in a range such that a condition holds (e.g. minimum capacity, maximum day, etc.).
+
+### 1. Classic iterative — find exact index
+
+Returns the index of `target` if present, otherwise `-1`.
+
+```python
+def binary_search(arr, target):
+    """Return index of target in sorted arr, or -1 if not found."""
+    left, right = 0, len(arr) - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if arr[mid] == target:
+            return mid
+        if arr[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1
+
+# Examples
+arr = [1, 3, 5, 7, 9, 11, 13, 15]
+print(binary_search(arr, 7))   # 3
+print(binary_search(arr, 8))  # -1
+print(binary_search(arr, 1))   # 0
+print(binary_search(arr, 15)) # 7
+```
+
+### 2. Recursive version
+
+Same contract as above, implemented recursively. Space O(log n) due to call stack.
+
+```python
+def binary_search_recursive(arr, target, left=0, right=None):
+    if right is None:
+        right = len(arr) - 1
+    if left > right:
+        return -1
+    mid = (left + right) // 2
+    if arr[mid] == target:
+        return mid
+    if arr[mid] < target:
+        return binary_search_recursive(arr, target, mid + 1, right)
+    return binary_search_recursive(arr, target, left, mid - 1)
+
+# Example
+arr = [1, 3, 5, 7, 9, 11, 13, 15]
+print(binary_search_recursive(arr, 9))  # 4
+```
+
+### 3. Lower bound — first index where arr[i] >= target
+
+Use when you need the **leftmost** position for `target` (or the insertion point if target is missing). Uses `right = mid` (not `mid - 1`) and typically `right = len(arr)` so that “insert at end” is representable.
+
+```python
+def lower_bound(arr, target):
+    """Smallest index i such that arr[i] >= target. If all < target, returns len(arr)."""
+    left, right = 0, len(arr)
+    while left < right:
+        mid = (left + right) // 2
+        if arr[mid] < target:
+            left = mid + 1
+        else:
+            right = mid
+    return left
+
+# Examples
+arr = [1, 2, 2, 2, 3, 4, 5]
+print(lower_bound(arr, 2))   # 1  (first 2)
+print(lower_bound(arr, 0))   # 0
+print(lower_bound(arr, 6))   # 7  (insert at end)
+print(lower_bound(arr, 2.5)) # 4  (insert between 2 and 3)
+```
+
+### 4. Upper bound — first index where arr[i] > target
+
+Smallest index such that `arr[i] > target`. Useful for ranges: count of `target` = `upper_bound(arr, target) - lower_bound(arr, target)`.
+
+```python
+def upper_bound(arr, target):
+    """Smallest index i such that arr[i] > target. If all <= target, returns len(arr)."""
+    left, right = 0, len(arr)
+    while left < right:
+        mid = (left + right) // 2
+        if arr[mid] <= target:
+            left = mid + 1
+        else:
+            right = mid
+    return left
+
+# Examples
+arr = [1, 2, 2, 2, 3, 4, 5]
+print(upper_bound(arr, 2))   # 4  (first index > 2)
+print(upper_bound(arr, 5))   # 7
+# Count of 2: upper_bound(arr, 2) - lower_bound(arr, 2) == 4 - 1 == 3
+```
+
+### 5. Search insert position
+
+Same as lower bound: index at which to insert `target` to keep non-decreasing order.
+
+```python
+def search_insert(nums, target):
+    """Index where target should be inserted to keep nums sorted."""
+    left, right = 0, len(nums)
+    while left < right:
+        mid = (left + right) // 2
+        if nums[mid] < target:
+            left = mid + 1
+        else:
+            right = mid
+    return left
+
+# Examples
+nums = [1, 3, 5, 6]
+print(search_insert(nums, 5))  # 2
+print(search_insert(nums, 2))  # 1
+print(search_insert(nums, 7))  # 4
+print(search_insert(nums, 0))  # 0
+```
+
+### 6. Binary search on the answer (find minimum valid value)
+
+Search over a **range of values** (e.g. integers) to find the **smallest** value for which a condition is true. Example: “minimum capacity such that we can ship all packages in D days.”
+
+```python
+def can_ship(weights, capacity, max_days):
+    """True if we can ship all weights with given capacity within max_days."""
+    days = 1
+    current = 0
+    for w in weights:
+        if current + w <= capacity:
+            current += w
+        else:
+            days += 1
+            current = w
+            if days > max_days:
+                return False
+    return True
+
+def min_capacity_to_ship(weights, days):
+    """Minimum capacity so that shipping takes <= days. Binary search on capacity."""
+    low = max(weights)
+    high = sum(weights)
+    while low < high:
+        mid = (low + high) // 2
+        if can_ship(weights, mid, days):
+            high = mid
+        else:
+            low = mid + 1
+    return low
+
+# Example: weights = [1,2,3,4,5,6,7,8,9,10], days = 5 → need capacity at least 15
+print(min_capacity_to_ship([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 5))  # 15
+```
+
+### 7. Find peak in a “mountain” array
+
+Array increases then decreases. Find any peak index (binary search on the “slope”).
+
+```python
+def find_peak_index(arr):
+    """Peak index in mountain array (arr increases then decreases)."""
+    left, right = 0, len(arr) - 1
+    while left < right:
+        mid = (left + right) // 2
+        if arr[mid] > arr[mid + 1]:
+            right = mid
+        else:
+            left = mid + 1
+    return left
+
+# Example: [1, 2, 3, 1] -> peak at index 2
+print(find_peak_index([1, 2, 3, 1]))       # 2
+print(find_peak_index([1, 3, 5, 4, 2]))  # 2
+```
+
+### 8. Find the smallest value in a rotated sorted array
+
+Array is sorted then rotated (e.g. `[4,5,6,7,0,1,2]`). Find the minimum element.
+
+```python
+def find_min_rotated(arr):
+    """Minimum element in rotated sorted array (no duplicates)."""
+    left, right = 0, len(arr) - 1
+    while left < right:
+        mid = (left + right) // 2
+        if arr[mid] > arr[right]:
+            left = mid + 1
+        else:
+            right = mid
+    return arr[left]
+
+# Example
+print(find_min_rotated([4, 5, 6, 7, 0, 1, 2]))  # 0
+print(find_min_rotated([3, 1, 2]))               # 1
+```
+
+### Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Bounds** | For “insertion / lower bound” style use `right = len(arr)` and `while left < right`; for “find exact” use `right = len(arr)-1` and `while left <= right`. |
+| **Mid** | Prefer `mid = left + (right - left) // 2` in languages where `left + right` can overflow; in Python `(left + right) // 2` is fine. |
+| **Shrinking** | In “first position ≥ target” variants use `right = mid` (keep mid in range); in “find exact” use `right = mid - 1`. |
+| **Duplicates** | Use lower_bound for first occurrence, upper_bound for last (or “one past last”); count = upper_bound − lower_bound. |
+
+### Related sections and problems
+
+- More search techniques: [Searching Algorithms](#searching-algorithms).
+- Solved problems tagged Binary Search: see [Solved Problems Index](#solved-problems-index) (e.g. Find Peak Element, Koko Eating Bananas, Search Insert Position).
 
 ---
 
