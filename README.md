@@ -19,31 +19,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 8. [Heap Algorithms](#heap-algorithms)
 9. [String Algorithms](#string-algorithms)
 10. [String Matching Algorithm](#string-matching-algorithm)
-11. [Sorting Algorithms](#sorting-algorithms)
-12. [Searching Algorithms](#searching-algorithms)
-13. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-14. [Array Algorithms](#array-algorithms)
-15. [Graph Algorithms](#graph-algorithms)
+11. [Linked List Algorithm](#linked-list-algorithm)
+12. [Sorting Algorithms](#sorting-algorithms)
+13. [Searching Algorithms](#searching-algorithms)
+14. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+15. [Array Algorithms](#array-algorithms)
+16. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-16. [Fundamental Data Structures](#fundamental-data-structures)
+17. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-17. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-18. [Optimization Techniques](#optimization-techniques)
-19. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-20. [Cryptographic Algorithms](#cryptographic-algorithms)
-21. [Data Compression Algorithms](#data-compression-algorithms)
-22. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-23. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-24. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-25. [Specialized Application Algorithms](#specialized-application-algorithms)
+18. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+19. [Optimization Techniques](#optimization-techniques)
+20. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+21. [Cryptographic Algorithms](#cryptographic-algorithms)
+22. [Data Compression Algorithms](#data-compression-algorithms)
+23. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+24. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+25. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+26. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-26. [Solved Problems Index](#solved-problems-index)
+27. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-27. [Further Reading and Study Resources](#further-reading-and-study-resources)
+28. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -1373,6 +1374,248 @@ print(repeated_substring_pattern("abcabc")) # True
 - General string tricks: [String Algorithms](#string-algorithms).
 - More pattern matching (e.g. Aho–Corasick): [String Processing and Pattern Matching](#string-processing-and-pattern-matching).
 - Typical LeetCode problems: Implement strStr(), Repeated Substring Pattern, Find the Index of the First Occurrence (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## Linked List Algorithm
+
+A **linked list** is a linear structure of **nodes**. Each node holds a value and a **next** (and optionally **prev**) pointer. There is no random access by index; traversal is sequential. **Singly linked**: one pointer per node. **Doubly linked**: `next` and `prev`. **Circular**: last node points back to head (or self in single-node case).
+
+### Operations and complexity (singly linked)
+
+| Operation | Time | Notes |
+|-----------|------|--------|
+| Access by index | O(k) | Must traverse k steps. |
+| Search by value | O(n) | Linear scan. |
+| Insert after known node | O(1) | Just relink pointers. |
+| Delete node (if you have ref to predecessor or use trick) | O(1) | Relink. |
+| Insert/delete at head | O(1) | Update head. |
+| Reverse entire list | O(n) | One pass with pointer manipulation. |
+
+### When to use
+
+- **In-place** reordering without shifting (reverse, partition, reorder).
+- **Merge** two sorted lists, **split** lists (e.g. middle).
+- **Cycle detection** (Floyd’s hare and tortoise).
+- **Dummy node** pattern to simplify head handling and “previous” pointer.
+
+### 1. Node class and building a list
+
+```python
+from __future__ import annotations
+
+class ListNode:
+    def __init__(self, val: int = 0, next: ListNode | None = None):
+        self.val = val
+        self.next = next
+
+def build_list(values: list[int]) -> ListNode | None:
+    """Build a singly linked list from a list of values."""
+    dummy = ListNode(0)
+    cur = dummy
+    for v in values:
+        cur.next = ListNode(v)
+        cur = cur.next
+    return dummy.next
+
+def list_to_array(head: ListNode | None) -> list[int]:
+    """Convert linked list to list for printing/testing."""
+    out = []
+    while head:
+        out.append(head.val)
+        head = head.next
+    return out
+
+# Example
+head = build_list([1, 2, 3, 4])
+print(list_to_array(head))  # [1, 2, 3, 4]
+```
+
+### 2. Reverse linked list (iterative)
+
+```python
+def reverse_list(head: ListNode | None) -> ListNode | None:
+    prev = None
+    while head:
+        nxt = head.next
+        head.next = prev
+        prev = head
+        head = nxt
+    return prev
+
+# Example
+head = build_list([1, 2, 3, 4])
+rev = reverse_list(head)
+print(list_to_array(rev))  # [4, 3, 2, 1]
+```
+
+### 3. Reverse linked list (recursive)
+
+```python
+def reverse_list_rec(head: ListNode | None) -> ListNode | None:
+    if not head or not head.next:
+        return head
+    new_head = reverse_list_rec(head.next)
+    head.next.next = head
+    head.next = None
+    return new_head
+```
+
+### 4. Find middle node (slow/fast pointers)
+
+```python
+def middle_node(head: ListNode | None) -> ListNode | None:
+    """Return the middle node (second of two if even length)."""
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+    return slow
+
+# Example: [1,2,3,4,5] -> 3; [1,2,3,4] -> 3 (second middle)
+head = build_list([1, 2, 3, 4, 5])
+print(middle_node(head).val)  # 3
+```
+
+### 5. Merge two sorted lists
+
+```python
+def merge_two_lists(l1: ListNode | None, l2: ListNode | None) -> ListNode | None:
+    dummy = ListNode(0)
+    cur = dummy
+    while l1 and l2:
+        if l1.val <= l2.val:
+            cur.next = l1
+            l1 = l1.next
+        else:
+            cur.next = l2
+            l2 = l2.next
+        cur = cur.next
+    cur.next = l1 or l2
+    return dummy.next
+
+# Example
+a = build_list([1, 3, 5])
+b = build_list([2, 4, 6])
+print(list_to_array(merge_two_lists(a, b)))  # [1, 2, 3, 4, 5, 6]
+```
+
+### 6. Detect cycle (Floyd’s cycle detection)
+
+```python
+def has_cycle(head: ListNode | None) -> bool:
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+        if slow == fast:
+            return True
+    return False
+
+def cycle_entry(head: ListNode | None) -> ListNode | None:
+    """Return the node where cycle begins, or None if no cycle."""
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+        if slow == fast:
+            slow = head
+            while slow != fast:
+                slow = slow.next
+                fast = fast.next
+            return slow
+    return None
+```
+
+### 7. Remove Nth node from end (one pass)
+
+```python
+def remove_nth_from_end(head: ListNode | None, n: int) -> ListNode | None:
+    """Remove the nth node from the end (1-indexed)."""
+    dummy = ListNode(0, head)
+    fast = head
+    for _ in range(n):
+        fast = fast.next
+    slow = dummy
+    while fast:
+        fast = fast.next
+        slow = slow.next
+    slow.next = slow.next.next
+    return dummy.next
+
+# Example: [1,2,3,4,5], n=2 -> [1,2,3,5]
+head = build_list([1, 2, 3, 4, 5])
+print(list_to_array(remove_nth_from_end(head, 2)))  # [1, 2, 3, 5]
+```
+
+### 8. Reorder list (e.g. L0 → Ln → L1 → Ln−1 → …)
+
+Split at middle, reverse second half, then merge alternately.
+
+```python
+def reorder_list(head: ListNode | None) -> None:
+    """In-place: L0->Ln->L1->Ln-1->..."""
+    if not head or not head.next:
+        return
+    # Find middle
+    slow = fast = head
+    while fast.next and fast.next.next:
+        slow = slow.next
+        fast = fast.next.next
+    # Reverse second half
+    second = slow.next
+    slow.next = None
+    prev = None
+    while second:
+        nxt = second.next
+        second.next = prev
+        prev = second
+        second = nxt
+    # Merge
+    first, second = head, prev
+    while second:
+        t1, t2 = first.next, second.next
+        first.next = second
+        second.next = t1
+        first, second = t1, t2
+
+# Example
+head = build_list([1, 2, 3, 4])
+reorder_list(head)
+print(list_to_array(head))  # [1, 4, 2, 3]
+```
+
+### 9. Dummy node pattern
+
+Using a **dummy** node before the head avoids special-casing the head when building a new list or deleting the first node.
+
+```python
+def delete_all_with_value(head: ListNode | None, val: int) -> ListNode | None:
+    """Remove all nodes with value val."""
+    dummy = ListNode(0, head)
+    cur = dummy
+    while cur.next:
+        if cur.next.val == val:
+            cur.next = cur.next.next
+        else:
+            cur = cur.next
+    return dummy.next
+```
+
+### 10. Implementation notes and patterns
+
+| Pattern | Idea |
+|--------|------|
+| **Dummy node** | `dummy = ListNode(0, head)`; build or modify from `dummy`; return `dummy.next`. |
+| **Slow/fast pointers** | Middle: advance fast 2 steps, slow 1. Cycle: same until they meet. |
+| **Reverse in place** | Three pointers: `prev`, `cur`, `nxt`; reverse link then advance. |
+| **Merge two sorted** | Dummy + one `cur`; attach smaller of `l1.val` / `l2.val`; attach remainder. |
+| **Delete node** | If you have predecessor: `prev.next = node.next`. Without predecessor: copy `node.next.val` into `node`, then `node.next = node.next.next` (if not tail). |
+
+### Related sections and problems
+
+- Data structure details: [Fundamental Data Structures](#fundamental-data-structures) (Linked List subsection).
+- Typical LeetCode problems: Reverse Linked List, Merge Two Sorted Lists, Linked List Cycle, Remove Nth Node From End of List, Reorder List, Add Two Numbers (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
