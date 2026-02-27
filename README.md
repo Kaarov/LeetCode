@@ -27,31 +27,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 16. [Two Pointers Algorithm](#two-pointers-algorithm)
 17. [Sliding Window Algorithm](#sliding-window-algorithm)
 18. [Tree Algorithm](#tree-algorithm)
-19. [Sorting Algorithms](#sorting-algorithms)
-20. [Searching Algorithms](#searching-algorithms)
-21. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-22. [Array Algorithms](#array-algorithms)
-23. [Graph Algorithms](#graph-algorithms)
+19. [Binary Tree Algorithm](#binary-tree-algorithm)
+20. [Sorting Algorithms](#sorting-algorithms)
+21. [Searching Algorithms](#searching-algorithms)
+22. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+23. [Array Algorithms](#array-algorithms)
+24. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-24. [Fundamental Data Structures](#fundamental-data-structures)
+25. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-25. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-26. [Optimization Techniques](#optimization-techniques)
-27. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-28. [Cryptographic Algorithms](#cryptographic-algorithms)
-29. [Data Compression Algorithms](#data-compression-algorithms)
-30. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-31. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-32. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-33. [Specialized Application Algorithms](#specialized-application-algorithms)
+26. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+27. [Optimization Techniques](#optimization-techniques)
+28. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+29. [Cryptographic Algorithms](#cryptographic-algorithms)
+30. [Data Compression Algorithms](#data-compression-algorithms)
+31. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+32. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+33. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+34. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-34. [Solved Problems Index](#solved-problems-index)
+35. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-35. [Further Reading and Study Resources](#further-reading-and-study-resources)
+36. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -2988,6 +2989,208 @@ def is_valid_bst(root: TreeNode | None, lo: int | None = None, hi: int | None = 
 - Data structures: [Fundamental Data Structures](#fundamental-data-structures) (Trees, BST).
 - Graph traversal: [Graph Algorithms](#graph-algorithms) (BFS/DFS).
 - Typical LeetCode problems: Maximum Depth of Binary Tree, Same Tree, Invert Binary Tree, Lowest Common Ancestor of a Binary Tree, Path Sum, Validate Binary Search Tree, Binary Tree Level Order Traversal (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## Binary Tree Algorithm
+
+A **binary tree** is a tree in which each node has at most **two children** (left and right). This section covers binary-tree-specific structure, properties, and classic algorithms beyond basic traversal (see [Tree Algorithm](#tree-algorithm) for DFS/BFS, depth, LCA, path sum).
+
+### Definitions and properties
+
+| Type | Definition |
+|------|------------|
+| **Full binary tree** | Every node has 0 or 2 children. |
+| **Complete binary tree** | All levels fully filled except possibly the last, which is filled left to right. |
+| **Perfect binary tree** | All leaves at same depth; exactly 2^h − 1 nodes for height h. |
+| **Balanced** | Height is O(log n); e.g. AVL, Red-Black. |
+| **Binary search tree (BST)** | For every node, left subtree keys < root < right subtree keys. |
+
+### When to use
+
+- **Recursive structure**: most algorithms recurse on `root.left` and `root.right` and combine results.
+- **Path / diameter**: compute per-node “height” or “longest path through this node” and take max.
+- **Construction**: build from preorder+inorder or from level-order; use ranges or queues.
+- **Serialization**: encode tree to string (e.g. preorder with null markers) for storage or comparison.
+
+### 1. Diameter of binary tree (longest path between any two nodes)
+
+The diameter is the maximum number of **edges** on any path. For each node, the longest path **through** that node = 1 + left_height + right_height. Return the max over all nodes; recursion can return (diameter_so_far, height).
+
+```python
+from __future__ import annotations
+
+class TreeNode:
+    def __init__(self, val: int = 0, left: TreeNode | None = None, right: TreeNode | None = None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+def diameter_of_binary_tree(root: TreeNode | None) -> int:
+    """Return the length (number of edges) of the longest path between any two nodes."""
+    best = 0
+
+    def height(node: TreeNode | None) -> int:
+        nonlocal best
+        if not node:
+            return 0
+        left_h = height(node.left)
+        right_h = height(node.right)
+        best = max(best, left_h + right_h)
+        return 1 + max(left_h, right_h)
+
+    height(root)
+    return best
+```
+
+### 2. Symmetric tree (mirror of itself around root)
+
+Left subtree should be mirror of right subtree: compare `left.left` with `right.right` and `left.right` with `right.left`.
+
+```python
+def is_symmetric(root: TreeNode | None) -> bool:
+    def mirror(a: TreeNode | None, b: TreeNode | None) -> bool:
+        if a is None and b is None:
+            return True
+        if a is None or b is None or a.val != b.val:
+            return False
+        return mirror(a.left, b.right) and mirror(a.right, b.left)
+
+    return mirror(root, root) if root else True
+```
+
+### 3. Build tree from preorder and inorder
+
+Preorder gives root; find root in inorder to split into left and right inorder ranges; recurse.
+
+```python
+def build_tree_pre_in(preorder: list[int], inorder: list[int]) -> TreeNode | None:
+    if not preorder or not inorder:
+        return None
+    root_val = preorder[0]
+    root = TreeNode(root_val)
+    i = inorder.index(root_val)
+    root.left = build_tree_pre_in(preorder[1 : 1 + i], inorder[:i])
+    root.right = build_tree_pre_in(preorder[1 + i :], inorder[i + 1 :])
+    return root
+```
+
+### 4. Count nodes in a complete binary tree (O((log n)^2))
+
+For a complete tree, leftmost and rightmost paths from root give left and right heights. If equal, tree is perfect (2^h − 1 nodes); else 1 + count(left) + count(right).
+
+```python
+def count_nodes_complete(root: TreeNode | None) -> int:
+    if not root:
+        return 0
+    left_h = right_h = 0
+    p = root
+    while p:
+        left_h += 1
+        p = p.left
+    p = root
+    while p:
+        right_h += 1
+        p = p.right
+    if left_h == right_h:
+        return (1 << left_h) - 1
+    return 1 + count_nodes_complete(root.left) + count_nodes_complete(root.right)
+```
+
+### 5. Serialize and deserialize (preorder with null markers)
+
+Use a delimiter and a sentinel for null (e.g. `"#"`) so the string uniquely defines the tree; preorder is simple to parse.
+
+```python
+def serialize(root: TreeNode | None) -> str:
+    if not root:
+        return "#"
+    return str(root.val) + "," + serialize(root.left) + "," + serialize(root.right)
+
+def deserialize(data: str) -> TreeNode | None:
+    it = iter(data.split(","))
+
+    def parse() -> TreeNode | None:
+        val = next(it, "#")
+        if val == "#":
+            return None
+        node = TreeNode(int(val))
+        node.left = parse()
+        node.right = parse()
+        return node
+
+    return parse()
+```
+
+### 6. Maximum path sum (any path; node values can be negative)
+
+For each node, max path **through** this node = node.val + max(0, left_gain) + max(0, right_gain). Recurse returning the max **single-side** gain (node + max(0, left, right)) for the parent.
+
+```python
+def max_path_sum(root: TreeNode | None) -> int:
+    best = float("-inf")
+
+    def gain(node: TreeNode | None) -> int:
+        nonlocal best
+        if not node:
+            return 0
+        left_g = max(0, gain(node.left))
+        right_g = max(0, gain(node.right))
+        best = max(best, node.val + left_g + right_g)
+        return node.val + max(left_g, right_g)
+
+    gain(root)
+    return best if root else 0
+```
+
+### 7. Iterative traversals (stack-based)
+
+Preorder: push root; pop, process, push right then left. Inorder: go left to bottom, pop and process, then go right.
+
+```python
+def preorder_iter(root: TreeNode | None) -> list[int]:
+    if not root:
+        return []
+    stack = [root]
+    result = []
+    while stack:
+        node = stack.pop()
+        result.append(node.val)
+        if node.right:
+            stack.append(node.right)
+        if node.left:
+            stack.append(node.left)
+    return result
+
+def inorder_iter(root: TreeNode | None) -> list[int]:
+    stack = []
+    result = []
+    node = root
+    while stack or node:
+        while node:
+            stack.append(node)
+            node = node.left
+        node = stack.pop()
+        result.append(node.val)
+        node = node.right
+    return result
+```
+
+### 8. Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Diameter** | Length = number of **edges**; path through node = left_height + right_height (not +1 for node count). |
+| **Symmetric** | Compare left subtree with mirror of right (left.left ↔ right.right, left.right ↔ right.left). |
+| **Build from pre+in** | Preorder[0] is root; find in inorder to split; use same length for preorder left/right. |
+| **Complete tree count** | Use leftmost/rightmost height; if equal, subtree is perfect. |
+| **Path sum / max path** | Decide whether path must be root-to-leaf or any path; handle negative values (e.g. max(0, gain)). |
+
+### Related sections and problems
+
+- Basic traversal and LCA: [Tree Algorithm](#tree-algorithm).
+- Data structures: [Fundamental Data Structures](#fundamental-data-structures).
+- Typical LeetCode problems: Diameter of Binary Tree, Symmetric Tree, Construct Binary Tree from Preorder and Inorder, Count Complete Tree Nodes, Serialize and Deserialize Binary Tree, Binary Tree Maximum Path Sum (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
