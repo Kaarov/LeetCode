@@ -30,31 +30,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 19. [Binary Tree Algorithm](#binary-tree-algorithm)
 20. [DFS Algorithm](#dfs-algorithm)
 21. [BFS Algorithm](#bfs-algorithm)
-22. [Sorting Algorithms](#sorting-algorithms)
-23. [Searching Algorithms](#searching-algorithms)
-24. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-25. [Array Algorithms](#array-algorithms)
-26. [Graph Algorithms](#graph-algorithms)
+22. [Topological Sort Algorithm](#topological-sort-algorithm)
+23. [Sorting Algorithms](#sorting-algorithms)
+24. [Searching Algorithms](#searching-algorithms)
+25. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+26. [Array Algorithms](#array-algorithms)
+27. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-27. [Fundamental Data Structures](#fundamental-data-structures)
+28. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-28. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-29. [Optimization Techniques](#optimization-techniques)
-30. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-31. [Cryptographic Algorithms](#cryptographic-algorithms)
-32. [Data Compression Algorithms](#data-compression-algorithms)
-33. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-34. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-35. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-36. [Specialized Application Algorithms](#specialized-application-algorithms)
+29. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+30. [Optimization Techniques](#optimization-techniques)
+31. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+32. [Cryptographic Algorithms](#cryptographic-algorithms)
+33. [Data Compression Algorithms](#data-compression-algorithms)
+34. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+35. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+36. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+37. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-37. [Solved Problems Index](#solved-problems-index)
+38. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-38. [Further Reading and Study Resources](#further-reading-and-study-resources)
+39. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -3682,6 +3683,207 @@ def max_depth_bfs(root: TreeNode | None) -> int:
 - DFS: [DFS Algorithm](#dfs-algorithm). Trees: [Tree Algorithm](#tree-algorithm), [Binary Tree Algorithm](#binary-tree-algorithm).
 - Weighted shortest paths: [Graph Algorithms](#graph-algorithms) (Dijkstra, etc.).
 - LeetCode-style problems: Binary Tree Level Order Traversal, Shortest Path in Binary Matrix, 01 Matrix, Course Schedule II, Rotting Oranges (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## Topological Sort Algorithm
+
+**Topological sort** is a linear ordering of the vertices of a **directed acyclic graph (DAG)** such that for every directed edge (u, v), vertex u comes before v in the ordering. It is used for **dependency resolution**, **scheduling**, and **build order**. A graph has a topological order **if and only if** it is a DAG (no directed cycles).
+
+### When to use
+
+| Scenario | Use topological sort when |
+|----------|----------------------------|
+| **Task dependencies** | Tasks with prerequisites (e.g. course A before B). |
+| **Build order** | Compile modules in an order that respects dependencies. |
+| **Event ordering** | Order events so all “before” constraints are satisfied. |
+| **DAG scheduling** | Any problem that can be modeled as a DAG and needs a valid order. |
+
+### Two main approaches
+
+| Method | Idea | Cycle detection |
+|--------|------|------------------|
+| **DFS (post-order)** | Run DFS; append node when **finishing**; reverse the list. | If during DFS we hit a node already in the current path → cycle. |
+| **Kahn (in-degree)** | Repeatedly remove a node with in-degree 0; add to order; update in-degrees. | If the final order has fewer than V nodes → cycle. |
+
+### Complexity
+
+| Approach | Time | Space |
+|----------|------|--------|
+| DFS | O(V + E) | O(V) stack + visited |
+| Kahn | O(V + E) | O(V) queue + in-degree |
+
+### 1. Topological sort with DFS (post-order + reverse)
+
+Finish all descendants before appending the current node; reverse to get a valid topological order.
+
+```python
+def topological_sort_dfs(graph: dict[int, list[int]]) -> list[int]:
+    """Returns a topological order. Assumes graph is a DAG (no cycle check here)."""
+    visited = set()
+    result: list[int] = []
+
+    def dfs(u: int) -> None:
+        visited.add(u)
+        for v in graph.get(u, []):
+            if v not in visited:
+                dfs(v)
+        result.append(u)
+
+    for u in graph:
+        if u not in visited:
+            dfs(u)
+    result.reverse()
+    return result
+
+# Example: 5 depends on 2,0; 4 on 0,1; 2 on 3; 3 on 1
+graph = {5: [2, 0], 4: [0, 1], 2: [3], 3: [1], 1: [], 0: []}
+print(topological_sort_dfs(graph))  # e.g. [5, 4, 2, 3, 1, 0]
+```
+
+### 2. Topological sort with Kahn's algorithm (in-degree queue)
+
+Compute in-degrees; enqueue nodes with in-degree 0; dequeue, add to order, and decrease in-degree of neighbors; if any neighbor becomes 0, enqueue it.
+
+```python
+from collections import deque
+
+def topological_sort_kahn(graph: dict[int, list[int]]) -> list[int]:
+    """Returns topological order. Empty list if graph has a cycle."""
+    in_deg = {u: 0 for u in graph}
+    for u in graph:
+        for v in graph[u]:
+            in_deg[v] = in_deg.get(v, 0) + 1
+    q = deque([u for u in graph if in_deg[u] == 0])
+    order = []
+    while q:
+        u = q.popleft()
+        order.append(u)
+        for v in graph.get(u, []):
+            in_deg[v] -= 1
+            if in_deg[v] == 0:
+                q.append(v)
+    return order if len(order) == len(graph) else []
+```
+
+### 3. Cycle detection with DFS (three states)
+
+If an edge goes to a node that is **in the current DFS path** (gray), there is a directed cycle. Nodes are: unvisited (white), in path (gray), finished (black).
+
+```python
+def has_cycle_directed(graph: dict[int, list[int]]) -> bool:
+    WHITE, GRAY, BLACK = 0, 1, 2
+    state = {u: WHITE for u in graph}
+
+    def dfs(u: int) -> bool:
+        state[u] = GRAY
+        for v in graph.get(u, []):
+            if state[v] == GRAY:
+                return True
+            if state[v] == WHITE and dfs(v):
+                return True
+        state[u] = BLACK
+        return False
+
+    return any(state[u] == WHITE and dfs(u) for u in graph)
+```
+
+### 4. Topological sort with cycle detection (return order or empty)
+
+Combine Kahn with cycle check: if the produced order has length < V, a cycle exists.
+
+```python
+def topological_order_or_none(graph: dict[int, list[int]]) -> list[int] | None:
+    """Topological order if DAG; None if cycle."""
+    in_deg = {u: 0 for u in graph}
+    for u in graph:
+        for v in graph[u]:
+            in_deg[v] = in_deg.get(v, 0) + 1
+    q = deque([u for u in graph if in_deg[u] == 0])
+    order = []
+    while q:
+        u = q.popleft()
+        order.append(u)
+        for v in graph.get(u, []):
+            in_deg[v] -= 1
+            if in_deg[v] == 0:
+                q.append(v)
+    return order if len(order) == len(graph) else None
+```
+
+### 5. Course schedule (can finish? + one valid order)
+
+Given numCourses and list of [a, b] (take b before a), return whether all courses can be finished and optionally one valid order. Build graph: b → a; run Kahn; if order length == numCourses, return True and the order.
+
+```python
+def can_finish_and_order(num_courses: int, prerequisites: list[list[int]]) -> tuple[bool, list[int]]:
+    """prerequisites: [a, b] means b -> a (take b before a). Returns (can_finish, order)."""
+    graph: dict[int, list[int]] = {i: [] for i in range(num_courses)}
+    for a, b in prerequisites:
+        graph[b].append(a)
+    in_deg = [0] * num_courses
+    for u in range(num_courses):
+        for v in graph[u]:
+            in_deg[v] += 1
+    q = deque([u for u in range(num_courses) if in_deg[u] == 0])
+    order = []
+    while q:
+        u = q.popleft()
+        order.append(u)
+        for v in graph[u]:
+            in_deg[v] -= 1
+            if in_deg[v] == 0:
+                q.append(v)
+    can_finish = len(order) == num_courses
+    return can_finish, order if can_finish else []
+```
+
+### 6. All topological orders (backtracking)
+
+Enumerate every valid ordering by repeatedly choosing a node with in-degree 0, adding it to the current path, and recursing with updated in-degrees; backtrack.
+
+```python
+def all_topological_orders(graph: dict[int, list[int]]) -> list[list[int]]:
+    """Generate all topological orderings (exponential in general)."""
+    in_deg = {u: 0 for u in graph}
+    for u in graph:
+        for v in graph[u]:
+            in_deg[v] = in_deg.get(v, 0) + 1
+    result: list[list[int]] = []
+
+    def backtrack(path: list[int], in_deg_copy: dict[int, int]) -> None:
+        if len(path) == len(graph):
+            result.append(path[:])
+            return
+        for u in graph:
+            if in_deg_copy[u] == 0 and u not in path:
+                path.append(u)
+                for v in graph.get(u, []):
+                    in_deg_copy[v] -= 1
+                backtrack(path, in_deg_copy)
+                for v in graph.get(u, []):
+                    in_deg_copy[v] += 1
+                path.pop()
+
+    backtrack([], in_deg.copy())
+    return result
+```
+
+### Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **DAG only** | Topological order exists iff the graph has no directed cycle. |
+| **DFS order** | Append when **leaving** the node (post-order), then reverse. |
+| **Kahn cycle** | If after the loop `len(order) < V`, not all nodes were enqueued → cycle. |
+| **Node set** | Ensure every vertex appears as a key in `graph` (or compute from edges). |
+| **Multiple orders** | A DAG can have many valid orderings; DFS and Kahn may give different ones. |
+
+### Related sections and problems
+
+- Graph traversal: [DFS Algorithm](#dfs-algorithm), [BFS Algorithm](#bfs-algorithm).
+- More graph algorithms: [Graph Algorithms](#graph-algorithms).
+- LeetCode-style problems: Course Schedule, Course Schedule II, Alien Dictionary, Sequence Reconstruction (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
