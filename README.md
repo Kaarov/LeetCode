@@ -14,31 +14,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 
 ### Part II: Core Algorithms
 5. [Binary Search Algorithm](#binary-search-algorithm)
-6. [Sorting Algorithms](#sorting-algorithms)
-7. [Searching Algorithms](#searching-algorithms)
-8. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-9. [Array Algorithms](#array-algorithms)
-10. [Graph Algorithms](#graph-algorithms)
+6. [Stack Algorithms](#stack-algorithms)
+7. [Sorting Algorithms](#sorting-algorithms)
+8. [Searching Algorithms](#searching-algorithms)
+9. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+10. [Array Algorithms](#array-algorithms)
+11. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-11. [Fundamental Data Structures](#fundamental-data-structures)
+12. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-12. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-13. [Optimization Techniques](#optimization-techniques)
-14. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-15. [Cryptographic Algorithms](#cryptographic-algorithms)
-16. [Data Compression Algorithms](#data-compression-algorithms)
-17. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-18. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-19. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-20. [Specialized Application Algorithms](#specialized-application-algorithms)
+13. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+14. [Optimization Techniques](#optimization-techniques)
+15. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+16. [Cryptographic Algorithms](#cryptographic-algorithms)
+17. [Data Compression Algorithms](#data-compression-algorithms)
+18. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+19. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+20. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+21. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-21. [Solved Problems Index](#solved-problems-index)
+22. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-22. [Further Reading and Study Resources](#further-reading-and-study-resources)
+23. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -276,6 +277,218 @@ print(find_min_rotated([3, 1, 2]))               # 1
 
 - More search techniques: [Searching Algorithms](#searching-algorithms).
 - Solved problems tagged Binary Search: see [Solved Problems Index](#solved-problems-index) (e.g. Find Peak Element, Koko Eating Bananas, Search Insert Position).
+
+---
+
+## Stack Algorithms
+
+**Stacks** are LIFO (last-in, first-out) structures. They support fast `push` (add to top) and `pop` (remove from top), and are ideal for problems that need **reversal**, **nesting / matching**, or **“undo”** operations.
+
+Common time/space:
+- `push`, `pop`, `peek`, `is_empty`: **O(1)** time.
+- Space: O(n) for n elements.
+
+In interview / competitive programming tasks, stacks appear in:
+- Parentheses / bracket validation.
+- Expression evaluation (e.g., Reverse Polish Notation).
+- Monotonic stacks (next greater/smaller element, ranges, histograms).
+- DFS (iterative).
+- Parsing / decoding nested structures (e.g., `decodeString`).
+
+### 1. Basic stack implementation (Python list)
+
+```python
+class Stack:
+    def __init__(self):
+        self._items = []
+
+    def push(self, item):
+        self._items.append(item)
+
+    def pop(self):
+        if self.is_empty():
+            raise IndexError("pop from empty stack")
+        return self._items.pop()
+
+    def peek(self):
+        if self.is_empty():
+            return None
+        return self._items[-1]
+
+    def is_empty(self):
+        return len(self._items) == 0
+
+    def __len__(self):
+        return len(self._items)
+
+
+# Example usage
+s = Stack()
+for x in [1, 2, 3]:
+    s.push(x)
+
+print(s.pop())   # 3
+print(s.peek())  # 2
+print(len(s))    # 2
+```
+
+### 2. Valid parentheses (classic stack problem)
+
+Check if every opening bracket has a matching closing bracket in the correct order.
+
+```python
+def is_valid_parentheses(s: str) -> bool:
+    pairs = {')': '(', ']': '[', '}': '{'}
+    stack = []
+
+    for ch in s:
+        if ch in '([{':
+            stack.append(ch)
+        elif ch in ')]}':
+            if not stack or stack[-1] != pairs[ch]:
+                return False
+            stack.pop()
+
+    return not stack
+
+
+# Examples
+print(is_valid_parentheses("()[]{}"))      # True
+print(is_valid_parentheses("(]"))          # False
+print(is_valid_parentheses("([{}])"))      # True
+print(is_valid_parentheses("((())"))       # False
+```
+
+### 3. Evaluate Reverse Polish Notation (RPN)
+
+Given tokens like `["2","1","+","3","*"]`, compute the result using a stack.
+
+```python
+def eval_rpn(tokens: list[str]) -> int:
+    stack: list[int] = []
+
+    for token in tokens:
+        if token in {"+", "-", "*", "/"}:
+            b = stack.pop()
+            a = stack.pop()
+            if token == "+":
+                stack.append(a + b)
+            elif token == "-":
+                stack.append(a - b)
+            elif token == "*":
+                stack.append(a * b)
+            else:  # division truncates toward zero
+                stack.append(int(a / b))
+        else:
+            stack.append(int(token))
+
+    return stack[-1]
+
+
+# Examples
+print(eval_rpn(["2", "1", "+", "3", "*"]))     # (2 + 1) * 3 = 9
+print(eval_rpn(["4", "13", "5", "/", "+"]))    # 4 + 13/5 = 6
+```
+
+### 4. Monotonic stack – Next Greater Element
+
+Maintain a stack that is **monotonic decreasing** in values to find, for each element, the next element to the right that is greater.
+
+```python
+def next_greater_elements(nums: list[int]) -> list[int]:
+    """
+    For each index i, find index j > i such that nums[j] > nums[i] and j is minimal.
+    If no such j exists, answer is -1 for that position.
+    """
+    n = len(nums)
+    res = [-1] * n
+    stack: list[int] = []  # stack of indices, nums[stack] is decreasing
+
+    for i, val in enumerate(nums):
+        # Resolve all positions whose next greater is current val
+        while stack and nums[stack[-1]] < val:
+            idx = stack.pop()
+            res[idx] = i
+        stack.append(i)
+
+    return res
+
+
+# Example
+nums = [2, 1, 2, 4, 3]
+idxs = next_greater_elements(nums)
+print(idxs)                     # [3, 2, 3, -1, -1]
+print([nums[i] if i != -1 else -1 for i in idxs])
+# [4, 2, 4, -1, -1]
+```
+
+### 5. Monotonic stack – Daily Temperatures style
+
+Same pattern as above but returning **distance** instead of index.
+
+```python
+def days_until_warmer(temps: list[int]) -> list[int]:
+    """
+    For each day i, return how many days you would have to wait until a warmer temperature.
+    If there is no future day with a warmer temperature, return 0 for that day.
+    """
+    n = len(temps)
+    res = [0] * n
+    stack: list[int] = []  # indices of days, temps[stack] is decreasing
+
+    for i, t in enumerate(temps):
+        while stack and temps[stack[-1]] < t:
+            idx = stack.pop()
+            res[idx] = i - idx
+        stack.append(i)
+
+    return res
+
+
+# Example
+temps = [73, 74, 75, 71, 69, 72, 76, 73]
+print(days_until_warmer(temps))  # [1, 1, 4, 2, 1, 1, 0, 0]
+```
+
+### 6. Decode nested strings (e.g. \"3[a2[c]]\" → \"accaccacc\")
+
+Use a stack to handle nested repetition and concatenation.
+
+```python
+def decode_string(s: str) -> str:
+    num_stack: list[int] = []
+    str_stack: list[str] = []
+    current_num = 0
+    current_str = []
+
+    for ch in s:
+        if ch.isdigit():
+            current_num = current_num * 10 + int(ch)
+        elif ch == '[':
+            # Push current context
+            num_stack.append(current_num)
+            str_stack.append(''.join(current_str))
+            current_num = 0
+            current_str = []
+        elif ch == ']':
+            repeat = num_stack.pop()
+            prev_str = str_stack.pop()
+            current_str = [prev_str + ''.join(current_str) * repeat]
+        else:
+            current_str.append(ch)
+
+    return ''.join(current_str)
+
+
+# Examples
+print(decode_string(\"3[a]2[bc]\"))      # \"aaabcbc\"
+print(decode_string(\"3[a2[c]]\"))      # \"accaccacc\"
+print(decode_string(\"2[abc]3[cd]ef\")) # \"abcabccdcdcdef\"
+```
+
+### 7. Implementation notes and patterns
+
+| Pattern / Use case              | Idea                                                                 |\n|---------------------------------|----------------------------------------------------------------------|\n| Parentheses / bracket matching  | Push opening, pop when matching closing; invalid if mismatch/stack left. |\n| Expression evaluation (RPN)     | Push numbers, on operator pop 2 operands, compute, push result.     |\n| Monotonic stack                 | Maintain increasing/decreasing order to answer range queries in O(n). |\n| Iterative DFS                   | Use stack instead of recursion to explore graph or tree.            |\n| Undo operations                 | Push previous states onto stack; `undo` pops last state.            |\n\n### Related sections and problems\n\n- Data structure details: [Fundamental Data Structures](#fundamental-data-structures) (Stack subsection).\n- Typical LeetCode problems: Valid Parentheses, Evaluate Reverse Polish Notation, Daily Temperatures, Next Greater Element, Decode String (see [Solved Problems Index](#solved-problems-index)).\n*** End Patch```} ***!
 
 ---
 
