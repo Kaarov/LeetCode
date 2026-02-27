@@ -31,31 +31,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 20. [DFS Algorithm](#dfs-algorithm)
 21. [BFS Algorithm](#bfs-algorithm)
 22. [Topological Sort Algorithm](#topological-sort-algorithm)
-23. [Sorting Algorithms](#sorting-algorithms)
-24. [Searching Algorithms](#searching-algorithms)
-25. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-26. [Array Algorithms](#array-algorithms)
-27. [Graph Algorithms](#graph-algorithms)
+23. [Backtracking Algorithm](#backtracking-algorithm)
+24. [Sorting Algorithms](#sorting-algorithms)
+25. [Searching Algorithms](#searching-algorithms)
+26. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+27. [Array Algorithms](#array-algorithms)
+28. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-28. [Fundamental Data Structures](#fundamental-data-structures)
+29. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-29. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-30. [Optimization Techniques](#optimization-techniques)
-31. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-32. [Cryptographic Algorithms](#cryptographic-algorithms)
-33. [Data Compression Algorithms](#data-compression-algorithms)
-34. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-35. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-36. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-37. [Specialized Application Algorithms](#specialized-application-algorithms)
+30. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+31. [Optimization Techniques](#optimization-techniques)
+32. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+33. [Cryptographic Algorithms](#cryptographic-algorithms)
+34. [Data Compression Algorithms](#data-compression-algorithms)
+35. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+36. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+37. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+38. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-38. [Solved Problems Index](#solved-problems-index)
+39. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-39. [Further Reading and Study Resources](#further-reading-and-study-resources)
+40. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -3884,6 +3885,247 @@ def all_topological_orders(graph: dict[int, list[int]]) -> list[list[int]]:
 - Graph traversal: [DFS Algorithm](#dfs-algorithm), [BFS Algorithm](#bfs-algorithm).
 - More graph algorithms: [Graph Algorithms](#graph-algorithms).
 - LeetCode-style problems: Course Schedule, Course Schedule II, Alien Dictionary, Sequence Reconstruction (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## Backtracking Algorithm
+
+**Backtracking** builds candidate solutions incrementally and abandons a partial solution (“backtracks”) as soon as it cannot lead to a valid complete solution. It is essentially **DFS on the space of choices**: try an option, recurse, then undo the option and try another. Used for **enumeration** (all subsets, permutations, combinations) and **constraint satisfaction** (N-Queens, Sudoku, path finding).
+
+### When to use
+
+| Scenario | Use backtracking when |
+|----------|------------------------|
+| **Enumerate all** | Subsets, permutations, combinations, partitions. |
+| **Constraint satisfaction** | N-Queens, Sudoku, valid parentheses combinations. |
+| **Path / sequence** | Find a path in a grid or graph; generate sequences under rules. |
+| **Decision with undo** | Each choice can be tried and then reverted (no irreversible commitment). |
+
+### Template (choice → recurse → undo)
+
+1. **Base case**: If the current path is a complete solution, record it and return.
+2. **Choices**: For each valid next choice (often filtered by constraint).
+3. **Try**: Apply the choice (e.g. add to path, mark used).
+4. **Recurse**: Call the function on the updated state.
+5. **Undo**: Remove the choice so the parent can try other options.
+
+### Complexity (typical)
+
+- **Subsets**: O(2^n) solutions; each element in or out.
+- **Permutations**: O(n!) solutions.
+- **k-combinations**: C(n,k) solutions.
+- **N-Queens**: Exponential in n; pruning reduces the constant.
+
+### 1. All subsets (include / exclude each element)
+
+At each index, two choices: skip the element or include it; recurse then backtrack.
+
+```python
+def subsets(nums: list[int]) -> list[list[int]]:
+    result: list[list[int]] = []
+
+    def backtrack(i: int, path: list[int]) -> None:
+        if i == len(nums):
+            result.append(path[:])
+            return
+        backtrack(i + 1, path)
+        path.append(nums[i])
+        backtrack(i + 1, path)
+        path.pop()
+
+    backtrack(0, [])
+    return result
+
+print(subsets([1, 2, 3]))  # [[], [3], [2], [2, 3], [1], [1, 3], [1, 2], [1, 2, 3]]
+```
+
+### 2. All permutations (use each element exactly once)
+
+For each position, try every unused element; mark used, recurse, unmark.
+
+```python
+def permutations(nums: list[int]) -> list[list[int]]:
+    result: list[list[int]] = []
+
+    def backtrack(path: list[int], used: set[int]) -> None:
+        if len(path) == len(nums):
+            result.append(path[:])
+            return
+        for x in nums:
+            if x in used:
+                continue
+            used.add(x)
+            path.append(x)
+            backtrack(path, used)
+            path.pop()
+            used.remove(x)
+
+    backtrack([], set())
+    return result
+```
+
+### 3. Combinations of size k (from n elements)
+
+Choose from indices starting at `start`; when path length is k, record and return.
+
+```python
+def combine(n: int, k: int) -> list[list[int]]:
+    result: list[list[int]] = []
+
+    def backtrack(start: int, path: list[int]) -> None:
+        if len(path) == k:
+            result.append(path[:])
+            return
+        for i in range(start, n + 1):
+            path.append(i)
+            backtrack(i + 1, path)
+            path.pop()
+
+    backtrack(1, [])
+    return result
+```
+
+### 4. Combination sum (same element may be reused)
+
+Pick a candidate; add it to the path and recurse with the same index (reuse); then remove and try next index.
+
+```python
+def combination_sum(candidates: list[int], target: int) -> list[list[int]]:
+    result: list[list[int]] = []
+
+    def backtrack(start: int, path: list[int], total: int) -> None:
+        if total == target:
+            result.append(path[:])
+            return
+        if total > target:
+            return
+        for i in range(start, len(candidates)):
+            path.append(candidates[i])
+            backtrack(i, path, total + candidates[i])
+            path.pop()
+
+    backtrack(0, [], 0)
+    return result
+```
+
+### 5. Palindrome partitioning (split string into palindromic substrings)
+
+At each step, try every prefix that is a palindrome; recurse on the rest; backtrack.
+
+```python
+def partition_palindrome(s: str) -> list[list[str]]:
+    result: list[list[str]] = []
+
+    def is_pal(l: int, r: int) -> bool:
+        while l < r:
+            if s[l] != s[r]:
+                return False
+            l, r = l + 1, r - 1
+        return True
+
+    def backtrack(start: int, path: list[str]) -> None:
+        if start == len(s):
+            result.append(path[:])
+            return
+        for end in range(start + 1, len(s) + 1):
+            if is_pal(start, end - 1):
+                path.append(s[start:end])
+                backtrack(end, path)
+                path.pop()
+
+    backtrack(0, [])
+    return result
+```
+
+### 6. N-Queens (place n queens so no two attack)
+
+Place a queen row by row; for each row try each column that is not attacked (check same column and both diagonals); recurse and backtrack.
+
+```python
+def solve_n_queens(n: int) -> list[list[str]]:
+    result: list[list[str]] = []
+    col = [-1] * n
+    diag1 = [False] * (2 * n - 1)
+    diag2 = [False] * (2 * n - 1)
+
+    def backtrack(row: int) -> None:
+        if row == n:
+            board = ["." * c + "Q" + "." * (n - 1 - c) for c in col]
+            result.append(board)
+            return
+        for c in range(n):
+            if col[c] >= 0 or diag1[row + c] or diag2[row - c + n - 1]:
+                continue
+            col[c], diag1[row + c], diag2[row - c + n - 1] = row, True, True
+            backtrack(row + 1)
+            col[c], diag1[row + c], diag2[row - c + n - 1] = -1, False, False
+
+    backtrack(0)
+    return result
+```
+
+### 7. Word search (find word in 2D grid)
+
+From each cell, try matching the next character in four directions; mark cell used, recurse, unmark.
+
+```python
+def exist(board: list[list[str]], word: str) -> bool:
+    R, C = len(board), len(board[0])
+
+    def backtrack(r: int, c: int, i: int) -> bool:
+        if i == len(word):
+            return True
+        if r < 0 or r >= R or c < 0 or c >= C or board[r][c] != word[i]:
+            return False
+        board[r][c], ch = "", board[r][c]
+        for dr, dc in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            if backtrack(r + dr, c + dc, i + 1):
+                return True
+        board[r][c] = ch
+        return False
+
+    return any(backtrack(r, c, 0) for r in range(R) for c in range(C))
+```
+
+### 8. Generate parentheses (n pairs of valid parentheses)
+
+Keep count of open and close; add "(" if open < n; add ")" if close < open; when length is 2n, record.
+
+```python
+def generate_parenthesis(n: int) -> list[str]:
+    result: list[str] = []
+
+    def backtrack(path: list[str], open_count: int, close_count: int) -> None:
+        if len(path) == 2 * n:
+            result.append("".join(path))
+            return
+        if open_count < n:
+            path.append("(")
+            backtrack(path, open_count + 1, close_count)
+            path.pop()
+        if close_count < open_count:
+            path.append(")")
+            backtrack(path, open_count, close_count + 1)
+            path.pop()
+
+    backtrack([], 0, 0)
+    return result
+```
+
+### Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Copy result** | Append `path[:]` (or a copy) to results; don’t append `path` itself (it changes). |
+| **Undo** | Always undo the last choice after the recursive call so siblings can try other options. |
+| **Pruning** | Check constraints before recursing to avoid useless branches (e.g. sum > target). |
+| **Order** | For combinations, pass `start` and iterate from `start` to avoid duplicate sets. |
+| **State** | Use a single mutable path/used set and undo; or pass new copies (simpler but more allocation). |
+
+### Related sections and problems
+
+- DFS: [DFS Algorithm](#dfs-algorithm) (backtracking is often DFS on choice tree). Paradigms: [Algorithm Design Paradigms](#algorithm-design-paradigms).
+- LeetCode-style problems: Subsets, Permutations, Combination Sum, Palindrome Partitioning, N-Queens, Word Search, Generate Parentheses (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
