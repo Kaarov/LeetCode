@@ -4131,17 +4131,149 @@ def generate_parenthesis(n: int) -> list[str]:
 
 ## Algorithm Design Paradigms
 
-An overview of the foundational strategies used to conceive algorithms, including divide-and-conquer, dynamic programming, greedy methods, backtracking, and probabilistic techniques. This section clarifies when and why a paradigm is appropriate, highlighting the trade-offs in complexity, implementation effort, and optimality guarantees.
+**Algorithm design paradigms** are high-level strategies for solving classes of problems. Choosing the right paradigm (divide-and-conquer, dynamic programming, greedy, backtracking, or probabilistic) shapes both correctness and efficiency. This section summarizes when each is appropriate and points to dedicated sections for details and code.
 
-### Key Concepts
-- Divide and Conquer
-- Backtracking
-- Recursion
-- Memoization
-- Tabulation
+### Paradigm overview
 
-### Related Problems
-*See [Solved Problems Index](#solved-problems-index) for implementations*
+| Paradigm | Idea | When to use | Typical complexity | See |
+|----------|------|-------------|---------------------|-----|
+| **Divide and conquer** | Split into subproblems, solve recursively, combine. | Subproblems independent; combination cost is small. | O(n log n) for merge sort, O(log n) for binary search. | [Merge Sort](#merge-sort-algorithm), [Binary Search](#binary-search-algorithm) |
+| **Dynamic programming** | Overlapping subproblems; store results; build from smaller states. | Optimal substructure + overlapping subproblems. | O(n), O(n²), O(n·W), etc. | [Dynamic Programming](#dynamic-programming) |
+| **Greedy** | Repeatedly make a locally optimal choice; no backtracking. | Greedy choice property + optimal substructure. | O(n) or O(n log n) with sort. | [Greedy Algorithms](#greedy-algorithms) |
+| **Backtracking** | Try a choice, recurse, undo; enumerate or find one solution. | Enumeration, constraint satisfaction, “try all” with prune. | O(2^n), O(n!), etc. | [Backtracking Algorithm](#backtracking-algorithm) |
+| **Probabilistic / approximation** | Use randomness or accept near-optimal solutions. | When exact/deterministic is slow or impossible. | Varies. | [Probabilistic and Approximation Algorithms](#probabilistic-and-approximation-algorithms) |
+
+### When to choose which
+
+- **Count/optimize over choices, overlapping subproblems** → [Dynamic Programming](#dynamic-programming).
+- **Locally optimal choice leads to global optimum** → [Greedy Algorithms](#greedy-algorithms).
+- **Enumerate all (subsets, permutations) or satisfy constraints** → [Backtracking Algorithm](#backtracking-algorithm).
+- **Split into independent halves, combine** → Divide and conquer (e.g. merge sort, binary search).
+- **NP-hard or need speed with controlled error** → [Probabilistic and Approximation Algorithms](#probabilistic-and-approximation-algorithms).
+
+### 1. Divide and conquer: merge sort
+
+Split array in half, sort each half, merge. Subproblems are independent; no overlapping.
+
+```python
+def merge_sort(arr: list[int]) -> list[int]:
+    if len(arr) <= 1:
+        return arr[:]
+    mid = len(arr) // 2
+    left = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
+    out, i, j = [], 0, 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            out.append(left[i])
+            i += 1
+        else:
+            out.append(right[j])
+            j += 1
+    out += left[i:] + right[j:]
+    return out
+```
+
+### 2. Divide and conquer: binary search
+
+Halve the search space each step; O(log n) comparisons.
+
+```python
+def binary_search(arr: list[int], target: int) -> int:
+    lo, hi = 0, len(arr) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if arr[mid] == target:
+            return mid
+        if arr[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1
+```
+
+### 3. Recursion vs memoization (DP)
+
+Plain recursion can repeat the same subproblem many times; memoization stores results so each subproblem is solved once.
+
+```python
+# Without memo: exponential (e.g. Fibonacci)
+def fib_slow(n: int) -> int:
+    if n <= 1:
+        return n
+    return fib_slow(n - 1) + fib_slow(n - 2)
+
+# With memo: O(n) time
+from functools import lru_cache
+@lru_cache(maxsize=None)
+def fib_memo(n: int) -> int:
+    if n <= 1:
+        return n
+    return fib_memo(n - 1) + fib_memo(n - 2)
+```
+
+### 4. Greedy vs DP: coin change
+
+- **Greedy**: Use largest coin first. Works only for **canonical** systems (e.g. 1, 5, 10, 25). See [Greedy Algorithms](#greedy-algorithms).
+- **DP**: For any denominations, compute minimum coins per amount. See [Dynamic Programming](#dynamic-programming).
+
+```python
+# Greedy (canonical coins only)
+def coin_greedy(coins: list[int], amount: int) -> int:
+    coins = sorted(coins, reverse=True)
+    c, i = 0, 0
+    while amount and i < len(coins):
+        c += amount // coins[i]
+        amount %= coins[i]
+        i += 1
+    return c if amount == 0 else -1
+
+# DP (any denominations)
+def coin_dp(coins: list[int], amount: int) -> int:
+    dp = [0] + [float("inf")] * amount
+    for a in range(1, amount + 1):
+        for c in coins:
+            if c <= a:
+                dp[a] = min(dp[a], 1 + dp[a - c])
+    return dp[amount] if dp[amount] != float("inf") else -1
+```
+
+### 5. Backtracking vs DP: subsets
+
+- **Backtracking**: Enumerate all 2^n subsets explicitly; recurse, try include/skip, undo. See [Backtracking Algorithm](#backtracking-algorithm).
+- **DP (bitmask or iterative)**: Count subsets or optimize over subsets without listing all; often O(n · 2^n) or O(n · W).
+
+```python
+# Backtracking: list all subsets
+def subsets_backtrack(nums: list[int]) -> list[list[int]]:
+    result = []
+    def bt(i: int, path: list[int]) -> None:
+        if i == len(nums):
+            result.append(path[:])
+            return
+        bt(i + 1, path)
+        path.append(nums[i])
+        bt(i + 1, path)
+        path.pop()
+    bt(0, [])
+    return result
+```
+
+### Implementation notes
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Recursion base case** | Always define a base case to avoid infinite recursion. |
+| **Overlapping subproblems** | If the same state is solved repeatedly, use DP (memo or table). |
+| **Greedy proof** | When using greedy, justify with exchange argument or show it fails on a counterexample. |
+| **Backtracking** | Copy the current path when recording a solution (`path[:]`); undo after each recursive call. |
+
+### Related sections and problems
+
+- **Divide and conquer**: [Merge Sort Algorithm](#merge-sort-algorithm), [Binary Search Algorithm](#binary-search-algorithm).
+- **DP, greedy, backtracking**: [Dynamic Programming](#dynamic-programming), [Greedy Algorithms](#greedy-algorithms), [Backtracking Algorithm](#backtracking-algorithm).
+- **Probabilistic**: [Probabilistic and Approximation Algorithms](#probabilistic-and-approximation-algorithms).
+- Practice: see [Solved Problems Index](#solved-problems-index) for implementations by paradigm.
 
 ---
 
