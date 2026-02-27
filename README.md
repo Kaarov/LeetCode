@@ -21,31 +21,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 10. [String Matching Algorithm](#string-matching-algorithm)
 11. [Linked List Algorithm](#linked-list-algorithm)
 12. [Hash Algorithm](#hash-algorithm)
-13. [Sorting Algorithms](#sorting-algorithms)
-14. [Searching Algorithms](#searching-algorithms)
-15. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-16. [Array Algorithms](#array-algorithms)
-17. [Graph Algorithms](#graph-algorithms)
+13. [Prefix Sum Algorithm](#prefix-sum-algorithm)
+14. [Sorting Algorithms](#sorting-algorithms)
+15. [Searching Algorithms](#searching-algorithms)
+16. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+17. [Array Algorithms](#array-algorithms)
+18. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-18. [Fundamental Data Structures](#fundamental-data-structures)
+19. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-19. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-20. [Optimization Techniques](#optimization-techniques)
-21. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-22. [Cryptographic Algorithms](#cryptographic-algorithms)
-23. [Data Compression Algorithms](#data-compression-algorithms)
-24. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-25. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-26. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-27. [Specialized Application Algorithms](#specialized-application-algorithms)
+20. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+21. [Optimization Techniques](#optimization-techniques)
+22. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+23. [Cryptographic Algorithms](#cryptographic-algorithms)
+24. [Data Compression Algorithms](#data-compression-algorithms)
+25. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+26. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+27. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+28. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-28. [Solved Problems Index](#solved-problems-index)
+29. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-29. [Further Reading and Study Resources](#further-reading-and-study-resources)
+30. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -1816,6 +1817,221 @@ print(group_by_key([("a", 1), ("b", 2), ("a", 3)]))  # {'a': [1, 3], 'b': [2]}
 
 - Data structure details: [Fundamental Data Structures](#fundamental-data-structures) (Hash Table subsection).
 - Typical LeetCode problems: Two Sum, Subarray Sum Equals K, Group Anagrams, First Unique Character, Intersection of Two Arrays, LRU Cache (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## Prefix Sum Algorithm
+
+**Prefix sums** (cumulative sums) let you answer **range-sum** queries in **O(1)** after an **O(n)** build. Define `prefix[i]` = sum of `arr[0]` through `arr[i-1]` (so `prefix[0] = 0`). Then the sum of `arr[left]` to `arr[right]` (inclusive) is `prefix[right+1] - prefix[left]`. The same idea extends to **2D** (rectangle sums) and to **difference arrays** (efficient range updates).
+
+### Operations and complexity
+
+| Operation | Time | Notes |
+|-----------|------|--------|
+| Build 1D prefix | O(n) | One pass: `prefix[i+1] = prefix[i] + arr[i]`. |
+| Range sum [l, r] | O(1) | `prefix[r+1] - prefix[l]`. |
+| Build 2D prefix | O(rows × cols) | Two passes (row then column) or nested loop. |
+| Rectangle sum | O(1) | Inclusion–exclusion with four prefix values. |
+| Difference array (range add) | O(1) per update | Then O(n) to reconstruct array. |
+
+### When to use
+
+- **Range sum** on a static array (many queries).
+- **Subarray sum equals K**: combine prefix sum with a hash map of “prefix value → count”.
+- **Pivot index** / equilibrium: compare left sum and right sum (derived from prefix).
+- **Range updates**: difference array (add `d` on [l, r] with two updates, then prefix-sum to get final array).
+- **2D**: sum of any rectangle in a matrix.
+
+### 1. Build 1D prefix and range sum query
+
+```python
+def build_prefix(arr: list[int]) -> list[int]:
+    """prefix[i] = sum(arr[0..i-1]), so prefix[0]=0, prefix[1]=arr[0], ..."""
+    n = len(arr)
+    prefix = [0] * (n + 1)
+    for i in range(n):
+        prefix[i + 1] = prefix[i] + arr[i]
+    return prefix
+
+def range_sum(prefix: list[int], left: int, right: int) -> int:
+    """Sum of arr[left]..arr[right] inclusive. 0-indexed."""
+    return prefix[right + 1] - prefix[left]
+
+# Example
+arr = [1, 2, 3, 4, 5]
+prefix = build_prefix(arr)
+print(range_sum(prefix, 1, 3))   # 2+3+4 = 9
+print(range_sum(prefix, 0, 4))   # 15
+```
+
+### 2. Subarray sum equals K (prefix + hash)
+
+Count contiguous subarrays with sum equal to K. For each ending index, count how many prefix sums equal `current_prefix - K`.
+
+```python
+def subarray_sum_k(nums: list[int], k: int) -> int:
+    prefix = 0
+    count = 0
+    seen: dict[int, int] = {0: 1}
+    for x in nums:
+        prefix += x
+        count += seen.get(prefix - k, 0)
+        seen[prefix] = seen.get(prefix, 0) + 1
+    return count
+
+# Example
+print(subarray_sum_k([1, 1, 1], 2))     # 2
+print(subarray_sum_k([1, 2, 3], 3))     # 2  ([1,2] and [3])
+```
+
+### 3. Find pivot index (left sum == right sum)
+
+Pivot index: sum of elements to the left equals sum of elements to the right (no elements = 0).
+
+```python
+def pivot_index(nums: list[int]) -> int:
+    total = sum(nums)
+    left_sum = 0
+    for i, x in enumerate(nums):
+        if left_sum == total - left_sum - x:
+            return i
+        left_sum += x
+    return -1
+
+# Example
+print(pivot_index([1, 7, 3, 6, 5, 6]))  # 3  (1+7+3 == 5+6)
+print(pivot_index([2, 1, -1]))          # 0  (right sum = 0)
+```
+
+### 4. Difference array (range update, then reconstruct)
+
+Add `value` to all elements in `[left, right]` with O(1) per update. Then reconstruct the array with one prefix-sum pass.
+
+```python
+def build_diff_array(arr: list[int]) -> list[int]:
+    """diff[i] = arr[i] - arr[i-1], diff[0] = arr[0]."""
+    n = len(arr)
+    diff = [0] * n
+    diff[0] = arr[0]
+    for i in range(1, n):
+        diff[i] = arr[i] - arr[i - 1]
+    return diff
+
+def range_add(diff: list[int], left: int, right: int, value: int) -> None:
+    """Add value to arr[left..right] (0-indexed, inclusive)."""
+    diff[left] += value
+    if right + 1 < len(diff):
+        diff[right + 1] -= value
+
+def reconstruct(diff: list[int]) -> list[int]:
+    """Convert difference array back to original array (prefix sum of diff)."""
+    arr = [0] * len(diff)
+    arr[0] = diff[0]
+    for i in range(1, len(diff)):
+        arr[i] = arr[i - 1] + diff[i]
+    return arr
+
+# Example
+arr = [1, 2, 3, 4, 5]
+diff = build_diff_array(arr)
+range_add(diff, 1, 3, 10)
+print(reconstruct(diff))  # [1, 12, 13, 14, 5]
+```
+
+### 5. 2D prefix sum (rectangle sum)
+
+`prefix[i][j]` = sum of all elements in the rectangle from `(0,0)` to `(i-1, j-1)`. Then sum of rectangle `(r1,c1)` to `(r2,c2)` = inclusion–exclusion.
+
+```python
+def build_prefix_2d(grid: list[list[int]]) -> list[list[int]]:
+    rows, cols = len(grid), len(grid[0])
+    prefix = [[0] * (cols + 1) for _ in range(rows + 1)]
+    for i in range(rows):
+        for j in range(cols):
+            prefix[i + 1][j + 1] = (
+                grid[i][j]
+                + prefix[i][j + 1]
+                + prefix[i + 1][j]
+                - prefix[i][j]
+            )
+    return prefix
+
+def rectangle_sum(
+    prefix: list[list[int]],
+    r1: int, c1: int, r2: int, c2: int
+) -> int:
+    """Sum of rectangle (r1,c1) to (r2,c2) inclusive. 0-indexed."""
+    return (
+        prefix[r2 + 1][c2 + 1]
+        - prefix[r1][c2 + 1]
+        - prefix[r2 + 1][c1]
+        + prefix[r1][c1]
+    )
+
+# Example
+grid = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9],
+]
+p = build_prefix_2d(grid)
+print(rectangle_sum(p, 0, 0, 1, 1))  # 1+2+4+5 = 12
+print(rectangle_sum(p, 1, 1, 2, 2))  # 5+6+8+9 = 28
+```
+
+### 6. Running sum (in-place prefix for simple cases)
+
+When you only need the prefix array and not the original, you can overwrite.
+
+```python
+def running_sum(nums: list[int]) -> list[int]:
+    """nums[i] becomes sum of nums[0..i]. In-place."""
+    for i in range(1, len(nums)):
+        nums[i] += nums[i - 1]
+    return nums
+
+# Example
+arr = [1, 2, 3, 4]
+print(running_sum(arr))  # [1, 3, 6, 10]
+```
+
+### 7. Product of array except self (prefix × suffix)
+
+Using “prefix product” and “suffix product” (or one pass with a running product), compute output[i] = product of all elements except self.
+
+```python
+def product_except_self(nums: list[int]) -> list[int]:
+    n = len(nums)
+    out = [1] * n
+    left = 1
+    for i in range(n):
+        out[i] = left
+        left *= nums[i]
+    right = 1
+    for i in range(n - 1, -1, -1):
+        out[i] *= right
+        right *= nums[i]
+    return out
+
+# Example
+print(product_except_self([1, 2, 3, 4]))  # [24, 12, 8, 6]
+```
+
+### 8. Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Index convention** | Use `prefix[0]=0`, `prefix[i]=sum(arr[0..i-1])` so range [l,r] = `prefix[r+1]-prefix[l]`. |
+| **Bounds** | Ensure `left`, `right` are in [0, n-1] and `left <= right`. |
+| **Difference array** | Range add [l, r]: add at l, subtract at r+1; then reconstruct with prefix sum. |
+| **2D** | Build row-by-row then use inclusion–exclusion for rectangle; watch 1-based prefix indices. |
+| **Subarray sum K** | Initialize `seen = {0: 1}` so subarrays starting at index 0 are counted. |
+
+### Related sections and problems
+
+- Hash + prefix: [Hash Algorithm](#hash-algorithm) (subarray sum K).
+- Array tricks: [Array Algorithms](#array-algorithms).
+- Typical LeetCode problems: Subarray Sum Equals K, Find Pivot Index, Product of Array Except Self, Range Sum Query (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
