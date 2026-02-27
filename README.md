@@ -5106,113 +5106,230 @@ def min_distance(word1: str, word2: str) -> int:
 
 ## Greedy Algorithms
 
-Introduces algorithms that make locally optimal choices in hopes of achieving global optimality, detailing the conditions under which greediness succeeds (matroids, exchange properties). Addresses classic applications including minimum spanning trees, scheduling, and compression coding.
+**Greedy algorithms** make a **locally optimal** choice at each step, hoping that this leads to a **globally optimal** solution. They work when the problem has **greedy choice property** (a global optimum can be reached by taking the best local choice) and **optimal substructure** (an optimal solution contains optimal solutions to subproblems). No backtracking; once a choice is made, it is final.
 
-### Key Concepts
-- Greedy Choice Property
-- Optimal Substructure
-- Activity Selection
-- Interval Scheduling
-- Huffman Coding
+### When to use
 
-### Python Examples
+| Scenario | Consider greedy when |
+|----------|------------------------|
+| **Intervals** | Max non-overlapping intervals, min removals to make non-overlapping, merge overlapping. |
+| **Scheduling** | Finish-by time, deadlines; often sort by end time or start time. |
+| **Best “value” per unit** | Fractional knapsack (value/weight); take highest ratio first. |
+| **Reach / jumps** | Can reach end? Min jumps? Greedy: extend farthest reach. |
+| **Stocks / profit** | One buy + one sell: track min so far, max profit. |
+| **Partition / groups** | Partition labels, task scheduler; group by constraint. |
 
-#### 1. Activity Selection Problem
+### When greedy is correct
+
+- **Exchange argument**: Show that swapping or replacing a greedy choice with another cannot improve the solution.
+- **Not always optimal**: Coin change with arbitrary denominations (e.g. [1, 3, 4] for 6) fails with greedy; use [Dynamic Programming](#dynamic-programming). Greedy coin change works only for **canonical** systems (e.g. US coins).
+
+### Complexity (typical)
+
+- **Sorting-based**: O(n log n) for sort + O(n) scan.
+- **Single pass**: O(n) when no sort needed (e.g. jump game, best time to buy/sell).
+
+### 1. Activity selection (max non-overlapping activities)
+
+Sort by **finish time**; take the first activity, then repeatedly take the next that starts after the last finish.
+
 ```python
-def activity_selection(start, finish):
-    """Select maximum number of non-overlapping activities."""
-    # Sort by finish time
-    activities = sorted(zip(start, finish), key=lambda x: x[1])
-    
-    selected = [0]  # First activity always selected
-    last_finish = activities[0][1]
-    
+def activity_selection(start: list[int], finish: list[int]) -> list[int]:
+    """Return indices of a maximum set of non-overlapping activities."""
+    activities = sorted(range(len(start)), key=lambda i: finish[i])
+    selected = [activities[0]]
+    last_finish = finish[activities[0]]
     for i in range(1, len(activities)):
-        if activities[i][0] >= last_finish:
-            selected.append(i)
-            last_finish = activities[i][1]
-    
+        idx = activities[i]
+        if start[idx] >= last_finish:
+            selected.append(idx)
+            last_finish = finish[idx]
     return selected
 
-# Example: Select maximum activities
-start = [1, 3, 0, 5, 8, 5]
-finish = [2, 4, 6, 7, 9, 9]
-print(activity_selection(start, finish))  # [0, 1, 3, 4]
+start, finish = [1, 3, 0, 5, 8, 5], [2, 4, 6, 7, 9, 9]
+print(activity_selection(start, finish))  # e.g. [0, 1, 3, 4]
 ```
 
-#### 2. Fractional Knapsack
+### 2. Fractional knapsack (items divisible)
+
+Sort by **value/weight** descending; take whole items until capacity allows, then a fraction of the next.
+
 ```python
-def fractional_knapsack(weights, values, capacity):
-    """Greedy approach: take items with highest value/weight ratio."""
-    items = [(v/w, w, v) for v, w in zip(values, weights)]
-    items.sort(reverse=True)  # Sort by value/weight ratio
-    
-    total_value = 0
-    remaining = capacity
-    
-    for ratio, weight, value in items:
-        if remaining >= weight:
-            total_value += value
-            remaining -= weight
+def fractional_knapsack(weights: list[int], values: list[int], capacity: int) -> float:
+    items = sorted(zip(weights, values), key=lambda x: x[1] / x[0], reverse=True)
+    total = 0.0
+    for w, v in items:
+        if capacity >= w:
+            total += v
+            capacity -= w
         else:
-            total_value += ratio * remaining
+            total += (v / w) * capacity
             break
-    
-    return total_value
+    return total
 
-# Example: Fractional knapsack
-weights = [10, 20, 30]
-values = [60, 100, 120]
-capacity = 50
-print(fractional_knapsack(weights, values, capacity))  # 240.0
+weights, values = [10, 20, 30], [60, 100, 120]
+print(fractional_knapsack(weights, values, 50))  # 240.0
 ```
 
-#### 3. Coin Change (Greedy - when applicable)
+### 3. Coin change (greedy – canonical systems only)
+
+Use largest coin first; works for US coins [1, 5, 10, 25], fails for e.g. [1, 3, 4] and amount 6.
+
 ```python
-def coin_change_greedy(coins, amount):
-    """Greedy coin change (works for canonical coin systems)."""
-    coins.sort(reverse=True)
+def coin_change_greedy(coins: list[int], amount: int) -> int:
+    coins = sorted(coins, reverse=True)
     count = 0
-    
-    for coin in coins:
-        if amount >= coin:
-            num_coins = amount // coin
-            count += num_coins
-            amount -= num_coins * coin
-    
+    for c in coins:
+        if amount >= c:
+            count += amount // c
+            amount %= c
     return count if amount == 0 else -1
 
-# Example: Make change for 67 cents
-coins = [25, 10, 5, 1]
-print(coin_change_greedy(coins, 67))  # 6 (2 quarters, 1 dime, 1 nickel, 2 pennies)
+print(coin_change_greedy([25, 10, 5, 1], 67))  # 6
 ```
 
-#### 4. Interval Scheduling
+### 4. Erase overlapping intervals (min removals)
+
+Sort by **end**; keep an interval if its start ≥ current end; else remove it (greedy: keep earlier finish to leave more room).
+
 ```python
-def erase_overlap_intervals(intervals):
-    """Remove minimum intervals to make non-overlapping."""
+def erase_overlap_intervals(intervals: list[list[int]]) -> int:
     if not intervals:
         return 0
-    
-    intervals.sort(key=lambda x: x[1])  # Sort by end time
-    count = 0
+    intervals.sort(key=lambda x: x[1])
     end = intervals[0][1]
-    
+    remove = 0
     for i in range(1, len(intervals)):
         if intervals[i][0] < end:
-            count += 1  # Remove overlapping interval
+            remove += 1
         else:
             end = intervals[i][1]
-    
-    return count
-
-# Example: Remove overlapping intervals
-intervals = [[1, 2], [2, 3], [3, 4], [1, 3]]
-print(erase_overlap_intervals(intervals))  # 1
+    return remove
 ```
 
-### Related Problems
-*See [Solved Problems Index](#solved-problems-index) for implementations*
+### 5. Merge intervals
+
+Sort by start; merge if current start ≤ last end, else start a new interval.
+
+```python
+def merge_intervals(intervals: list[list[int]]) -> list[list[int]]:
+    if not intervals:
+        return []
+    intervals.sort(key=lambda x: x[0])
+    out = [intervals[0][:]]
+    for s, e in intervals[1:]:
+        if s <= out[-1][1]:
+            out[-1][1] = max(out[-1][1], e)
+        else:
+            out.append([s, e])
+    return out
+```
+
+### 6. Jump game I (can reach last index?)
+
+Track **farthest** index reachable; if at some step i > farthest, return False.
+
+```python
+def can_jump(nums: list[int]) -> bool:
+    farthest = 0
+    for i in range(len(nums)):
+        if i > farthest:
+            return False
+        farthest = max(farthest, i + nums[i])
+    return True
+```
+
+### 7. Jump game II (min number of jumps)
+
+Maintain current reach and next reach; when i exceeds current reach, add a jump and set current = next.
+
+```python
+def jump(nums: list[int]) -> int:
+    if len(nums) <= 1:
+        return 0
+    jumps = 0
+    cur_reach = next_reach = 0
+    for i in range(len(nums)):
+        if i > cur_reach:
+            jumps += 1
+            cur_reach = next_reach
+        next_reach = max(next_reach, i + nums[i])
+    return jumps
+```
+
+### 8. Best time to buy and sell stock (one transaction)
+
+Track min price so far; at each day, profit = price - min_so_far; take max profit.
+
+```python
+def max_profit(prices: list[int]) -> int:
+    if not prices:
+        return 0
+    min_price = prices[0]
+    best = 0
+    for p in prices[1:]:
+        best = max(best, p - min_price)
+        min_price = min(min_price, p)
+    return best
+```
+
+### 9. Partition labels (max parts so each letter in one part)
+
+For each letter, record last index; scan and extend partition end to max of last indices seen; when i == end, push length and reset.
+
+```python
+def partition_labels(s: str) -> list[int]:
+    last = {c: i for i, c in enumerate(s)}
+    start = end = 0
+    result = []
+    for i, c in enumerate(s):
+        end = max(end, last[c])
+        if i == end:
+            result.append(end - start + 1)
+            start = i + 1
+    return result
+```
+
+### 10. Lemonade change (bills 5, 10, 20)
+
+Give change greedily: prefer 10+5 over 5+5+5 when giving 15. Track count of 5 and 10; return False if change cannot be given.
+
+```python
+def lemonade_change(bills: list[int]) -> bool:
+    five = ten = 0
+    for b in bills:
+        if b == 5:
+            five += 1
+        elif b == 10:
+            if five == 0:
+                return False
+            five -= 1
+            ten += 1
+        else:
+            if ten and five:
+                ten -= 1
+                five -= 1
+            elif five >= 3:
+                five -= 3
+            else:
+                return False
+    return True
+```
+
+### Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Sort key** | Intervals: often sort by **end** (activity selection, min removals) or **start** (merge). |
+| **Coin change** | Greedy only for canonical systems; otherwise use DP. |
+| **Proof** | When in doubt, justify with exchange argument or show a counterexample. |
+| **Order of scan** | Sometimes left-to-right (jump, stock), sometimes by sorted order. |
+
+### Related sections and problems
+
+- When greedy fails: [Dynamic Programming](#dynamic-programming) (e.g. coin change, 0/1 knapsack).
+- Paradigms: [Algorithm Design Paradigms](#algorithm-design-paradigms).
+- LeetCode-style problems: Merge Intervals, Non-overlapping Intervals, Jump Game I/II, Best Time to Buy and Sell Stock, Partition Labels, Task Scheduler (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
