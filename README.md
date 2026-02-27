@@ -25,31 +25,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 14. [Counting Sort Algorithm](#counting-sort-algorithm)
 15. [Merge Sort Algorithm](#merge-sort-algorithm)
 16. [Two Pointers Algorithm](#two-pointers-algorithm)
-17. [Sorting Algorithms](#sorting-algorithms)
-18. [Searching Algorithms](#searching-algorithms)
-19. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-20. [Array Algorithms](#array-algorithms)
-21. [Graph Algorithms](#graph-algorithms)
+17. [Sliding Window Algorithm](#sliding-window-algorithm)
+18. [Sorting Algorithms](#sorting-algorithms)
+19. [Searching Algorithms](#searching-algorithms)
+20. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+21. [Array Algorithms](#array-algorithms)
+22. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-22. [Fundamental Data Structures](#fundamental-data-structures)
+23. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-23. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-24. [Optimization Techniques](#optimization-techniques)
-25. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-26. [Cryptographic Algorithms](#cryptographic-algorithms)
-27. [Data Compression Algorithms](#data-compression-algorithms)
-28. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-29. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-30. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-31. [Specialized Application Algorithms](#specialized-application-algorithms)
+24. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+25. [Optimization Techniques](#optimization-techniques)
+26. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+27. [Cryptographic Algorithms](#cryptographic-algorithms)
+28. [Data Compression Algorithms](#data-compression-algorithms)
+29. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+30. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+31. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+32. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-32. [Solved Problems Index](#solved-problems-index)
+33. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-33. [Further Reading and Study Resources](#further-reading-and-study-resources)
+34. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -2632,6 +2633,189 @@ def middle_node(head: "ListNode | None") -> "ListNode | None":
 - Sliding window (variable/fixed): [String Algorithms](#string-algorithms), [Array Algorithms](#array-algorithms).
 - Linked list: [Linked List Algorithm](#linked-list-algorithm).
 - Typical LeetCode problems: Two Sum II, Remove Duplicates from Sorted Array, Move Zeroes, Valid Palindrome, Container With Most Water, Is Subsequence, Merge Two Sorted Lists (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## Sliding Window Algorithm
+
+The **sliding window** technique uses two indices (left and right) that define a **contiguous** subarray or substring. The “window” slides by moving one or both pointers while keeping a **constraint** satisfied (e.g. sum ≤ K, at most K distinct characters) or by maintaining a **fixed size** K. Many problems are solved in **O(n)** time with one pass.
+
+### Fixed vs variable window
+
+| Type | Window size | Typical approach |
+|------|-------------|------------------|
+| **Fixed (size K)** | Always K | Compute for first window; then for each step drop left element and add right element (update aggregate). |
+| **Variable** | Grows/shrinks | Expand right until constraint is violated; then shrink left until valid again (or expand/shrink depending on “max window” vs “min window”). |
+
+### When to use
+
+- **Subarray/substring** problems: max sum, min size with sum ≥ target, longest/shortest satisfying a condition.
+- **At most K distinct** (or exactly K): maintain a frequency map and window bounds.
+- **Fixed-length** stats: max in each window of size K (use deque for O(n); see [Queue Algorithms](#queue-algorithms)).
+
+### 1. Max sum subarray of fixed size K (fixed window)
+
+Compute sum of the first K elements; then slide: subtract `arr[left]`, add `arr[right]`, update best.
+
+```python
+def max_sum_subarray_k(arr: list[int], k: int) -> int:
+    """Maximum sum of any contiguous subarray of length k."""
+    if not arr or k <= 0 or k > len(arr):
+        return 0
+    window_sum = sum(arr[:k])
+    best = window_sum
+    for right in range(k, len(arr)):
+        window_sum += arr[right] - arr[right - k]
+        best = max(best, window_sum)
+    return best
+
+# Example
+arr = [2, 1, 5, 1, 3, 2]
+print(max_sum_subarray_k(arr, 3))  # 9  (subarray [5, 1, 3])
+```
+
+### 2. Longest substring without repeating characters (variable window)
+
+Expand right; when a duplicate appears, shrink left until the duplicate is removed (use a set or frequency map).
+
+```python
+def longest_substring_no_repeat(s: str) -> int:
+    """Length of longest substring with all distinct characters."""
+    seen = set()
+    left = 0
+    best = 0
+    for right, c in enumerate(s):
+        while c in seen:
+            seen.discard(s[left])
+            left += 1
+        seen.add(c)
+        best = max(best, right - left + 1)
+    return best
+
+# Example
+print(longest_substring_no_repeat("abcabcbb"))  # 3 ("abc")
+print(longest_substring_no_repeat("pwwkew"))    # 3 ("wke")
+```
+
+### 3. Max vowels in substring of length K (fixed window)
+
+Count vowels in first K chars; slide and update: subtract vowel at left, add vowel at right.
+
+```python
+VOWELS = set("aeiou")
+
+def max_vowels(s: str, k: int) -> int:
+    """Maximum number of vowels in any substring of length k."""
+    if k <= 0 or k > len(s):
+        return 0
+    count = sum(1 for c in s[:k] if c in VOWELS)
+    best = count
+    for right in range(k, len(s)):
+        if s[right - k] in VOWELS:
+            count -= 1
+        if s[right] in VOWELS:
+            count += 1
+        best = max(best, count)
+    return best
+
+# Example
+print(max_vowels("abciiidef", 3))  # 3  ("iii")
+```
+
+### 4. Minimum size subarray with sum ≥ target (variable window)
+
+Expand right (add to sum); when sum ≥ target, update best and shrink left until sum < target, then repeat.
+
+```python
+def min_subarray_sum_target(nums: list[int], target: int) -> int:
+    """Minimum length of contiguous subarray with sum >= target. 0 if none."""
+    left = 0
+    total = 0
+    best = len(nums) + 1
+    for right in range(len(nums)):
+        total += nums[right]
+        while total >= target:
+            best = min(best, right - left + 1)
+            total -= nums[left]
+            left += 1
+    return best if best <= len(nums) else 0
+
+# Example
+print(min_subarray_sum_target([2, 3, 1, 2, 4, 3], 7))   # 2  ([4, 3])
+print(min_subarray_sum_target([1, 4, 4], 4))             # 1
+```
+
+### 5. Longest substring with at most K distinct characters (variable window)
+
+Expand right; when distinct count > K, shrink left until count ≤ K. Track character frequencies in a dict (or Counter).
+
+```python
+def longest_substring_k_distinct(s: str, k: int) -> int:
+    """Length of longest substring containing at most k distinct characters."""
+    if k <= 0:
+        return 0
+    freq = {}
+    left = 0
+    best = 0
+    for right, c in enumerate(s):
+        freq[c] = freq.get(c, 0) + 1
+        while len(freq) > k:
+            lc = s[left]
+            freq[lc] -= 1
+            if freq[lc] == 0:
+                del freq[lc]
+            left += 1
+        best = max(best, right - left + 1)
+    return best
+
+# Example
+print(longest_substring_k_distinct("eceba", 2))   # 3  ("ece")
+print(longest_substring_k_distinct("aa", 1))     # 2
+```
+
+### 6. Sliding window maximum (deque; fixed window)
+
+For each window of size K, report the maximum. Use a **monotonic deque** (indices of elements in decreasing order). See [Queue Algorithms](#queue-algorithms) for full code; idea: drop indices that are out of window or smaller than the new element.
+
+```python
+from collections import deque
+
+def sliding_window_max(nums: list[int], k: int) -> list[int]:
+    """Max in each window of size k."""
+    if not nums or k <= 0 or k > len(nums):
+        return []
+    dq = deque()
+    result = []
+    for i, val in enumerate(nums):
+        while dq and dq[0] <= i - k:
+            dq.popleft()
+        while dq and nums[dq[-1]] <= val:
+            dq.pop()
+        dq.append(i)
+        if i >= k - 1:
+            result.append(nums[dq[0]])
+    return result
+
+# Example
+print(sliding_window_max([1, 3, -1, -3, 5, 3, 6, 7], 3))  # [3, 3, 5, 5, 6, 7]
+```
+
+### 7. Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Fixed window** | Initialize with first K; loop `right` from K to n-1; update by removing `arr[right-K]` and adding `arr[right]`. |
+| **Variable window** | Expand right in outer loop; shrink left in inner `while` until constraint holds again. |
+| **Off-by-one** | Window [left, right] inclusive has length `right - left + 1`. |
+| **Empty / k > n** | Return 0 or [] as appropriate. |
+| **Max in window** | Use monotonic deque; indices in deque have decreasing values; drop outdated from front, dominated from back. |
+
+### Related sections and problems
+
+- Two pointers: [Two Pointers Algorithm](#two-pointers-algorithm).
+- Deque for max/min in window: [Queue Algorithms](#queue-algorithms).
+- String windows: [String Algorithms](#string-algorithms).
+- Typical LeetCode problems: Maximum Average Subarray I, Longest Substring Without Repeating Characters, Minimum Size Subarray Sum, Sliding Window Maximum, Longest Repeating Character Replacement (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
