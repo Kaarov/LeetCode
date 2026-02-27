@@ -28,31 +28,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 17. [Sliding Window Algorithm](#sliding-window-algorithm)
 18. [Tree Algorithm](#tree-algorithm)
 19. [Binary Tree Algorithm](#binary-tree-algorithm)
-20. [Sorting Algorithms](#sorting-algorithms)
-21. [Searching Algorithms](#searching-algorithms)
-22. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-23. [Array Algorithms](#array-algorithms)
-24. [Graph Algorithms](#graph-algorithms)
+20. [DFS Algorithm](#dfs-algorithm)
+21. [Sorting Algorithms](#sorting-algorithms)
+22. [Searching Algorithms](#searching-algorithms)
+23. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+24. [Array Algorithms](#array-algorithms)
+25. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-25. [Fundamental Data Structures](#fundamental-data-structures)
+26. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-26. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-27. [Optimization Techniques](#optimization-techniques)
-28. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-29. [Cryptographic Algorithms](#cryptographic-algorithms)
-30. [Data Compression Algorithms](#data-compression-algorithms)
-31. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-32. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-33. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-34. [Specialized Application Algorithms](#specialized-application-algorithms)
+27. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+28. [Optimization Techniques](#optimization-techniques)
+29. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+30. [Cryptographic Algorithms](#cryptographic-algorithms)
+31. [Data Compression Algorithms](#data-compression-algorithms)
+32. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+33. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+34. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+35. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-35. [Solved Problems Index](#solved-problems-index)
+36. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-36. [Further Reading and Study Resources](#further-reading-and-study-resources)
+37. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -3191,6 +3192,252 @@ def inorder_iter(root: TreeNode | None) -> list[int]:
 - Basic traversal and LCA: [Tree Algorithm](#tree-algorithm).
 - Data structures: [Fundamental Data Structures](#fundamental-data-structures).
 - Typical LeetCode problems: Diameter of Binary Tree, Symmetric Tree, Construct Binary Tree from Preorder and Inorder, Count Complete Tree Nodes, Serialize and Deserialize Binary Tree, Binary Tree Maximum Path Sum (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## DFS Algorithm
+
+**Depth-First Search (DFS)** explores as far as possible along each branch before backtracking. It is used on **trees**, **graphs**, and **implicit state spaces** (e.g. permutations, subsets). DFS can be implemented **recursively** (call stack) or **iteratively** (explicit stack).
+
+### When to use
+
+| Scenario | Use DFS when |
+|----------|----------------|
+| **Traversal** | You need preorder, inorder, or postorder on trees; or any order on graphs. |
+| **Path / connectivity** | Find a path, detect cycles, or check if two nodes are connected. |
+| **Backtracking** | Enumerate combinations, permutations, or constrained choices (undo state after recurse). |
+| **Flood fill / components** | Label connected components on a grid or graph. |
+| **Topological order** | Post-order DFS on a DAG yields reverse topological order. |
+
+### Complexity (typical)
+
+| Setting | Time | Space |
+|---------|------|--------|
+| Tree, n nodes | O(n) | O(h) recursion or stack, h = height |
+| Graph, V vertices, E edges | O(V + E) | O(V) visited + stack |
+| Backtracking (e.g. subsets) | O(2^n) or similar | O(n) recursion depth |
+
+### 1. Recursive DFS on graph (adjacency list)
+
+Visit a node, then recurse on each unvisited neighbor. Use a `visited` set to avoid cycles.
+
+```python
+def dfs_graph_recursive(graph: dict, start: int, visited: set | None = None) -> list[int]:
+    """DFS traversal of graph; returns list of nodes in discovery order."""
+    if visited is None:
+        visited = set()
+    visited.add(start)
+    result = [start]
+    for neighbor in graph.get(start, []):
+        if neighbor not in visited:
+            result.extend(dfs_graph_recursive(graph, neighbor, visited))
+    return result
+
+# Example: graph as adjacency list
+graph = {0: [1, 2], 1: [2], 2: [0, 3], 3: [3]}
+print(dfs_graph_recursive(graph, 2))  # [2, 0, 1, 3]
+```
+
+### 2. Iterative DFS on graph (explicit stack)
+
+Same discovery order as recursive DFS when you push neighbors in reverse order (so first neighbor is popped first).
+
+```python
+def dfs_graph_iterative(graph: dict, start: int) -> list[int]:
+    visited = set()
+    stack = [start]
+    result = []
+    while stack:
+        node = stack.pop()
+        if node in visited:
+            continue
+        visited.add(node)
+        result.append(node)
+        for neighbor in reversed(graph.get(node, [])):
+            if neighbor not in visited:
+                stack.append(neighbor)
+    return result
+
+print(dfs_graph_iterative(graph, 2))  # [2, 0, 1, 3]
+```
+
+### 3. DFS on 2D grid (flood fill / connected components)
+
+Explore all cells reachable from (r, c) that match a condition (e.g. same color). Mark visited in place or with a set.
+
+```python
+def flood_fill(grid: list[list[int]], sr: int, sc: int, new_color: int) -> list[list[int]]:
+    """Replace connected component containing (sr, sc) with new_color."""
+    R, C = len(grid), len(grid[0])
+    old = grid[sr][sc]
+    if old == new_color:
+        return grid
+
+    def dfs(r: int, c: int) -> None:
+        if r < 0 or r >= R or c < 0 or c >= C or grid[r][c] != old:
+            return
+        grid[r][c] = new_color
+        for dr, dc in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            dfs(r + dr, c + dc)
+
+    dfs(sr, sc)
+    return grid
+```
+
+### 4. DFS with path (find any path from start to target)
+
+Pass current path down the recursion; backtrack by popping after the recursive call.
+
+```python
+def find_path_graph(graph: dict, start: int, target: int) -> list[int] | None:
+    visited = set()
+    path: list[int] = []
+
+    def dfs(node: int) -> bool:
+        visited.add(node)
+        path.append(node)
+        if node == target:
+            return True
+        for neighbor in graph.get(node, []):
+            if neighbor not in visited and dfs(neighbor):
+                return True
+        path.pop()
+        return False
+
+    return path if dfs(start) else None
+```
+
+### 5. Cycle detection in directed graph (DFS with three states)
+
+Use three states: unvisited, in current path (gray), finished (black). Cycle exists iff we hit a node that is in the current path.
+
+```python
+def has_cycle_directed(graph: dict) -> bool:
+    WHITE, GRAY, BLACK = 0, 1, 2
+    state = {v: WHITE for v in graph}
+
+    def dfs(node: int) -> bool:
+        state[node] = GRAY
+        for neighbor in graph.get(node, []):
+            if state[neighbor] == GRAY:
+                return True
+            if state[neighbor] == WHITE and dfs(neighbor):
+                return True
+        state[node] = BLACK
+        return False
+
+    return any(state[v] == WHITE and dfs(v) for v in graph)
+```
+
+### 6. Backtracking: generate all subsets
+
+Classic DFS over “include / exclude” choices; each call corresponds to one index.
+
+```python
+def subsets(nums: list[int]) -> list[list[int]]:
+    result: list[list[int]] = []
+
+    def dfs(i: int, path: list[int]) -> None:
+        if i == len(nums):
+            result.append(path[:])
+            return
+        dfs(i + 1, path)
+        path.append(nums[i])
+        dfs(i + 1, path)
+        path.pop()
+
+    dfs(0, [])
+    return result
+
+print(subsets([1, 2, 3]))  # [[], [3], [2], [2, 3], [1], [1, 3], [1, 2], [1, 2, 3]]
+```
+
+### 7. Backtracking: generate all permutations
+
+Swap or use a “used” mask; backtrack by undoing the choice.
+
+```python
+def permutations(nums: list[int]) -> list[list[int]]:
+    result: list[list[int]] = []
+
+    def dfs(path: list[int], used: set[int]) -> None:
+        if len(path) == len(nums):
+            result.append(path[:])
+            return
+        for x in nums:
+            if x in used:
+                continue
+            used.add(x)
+            path.append(x)
+            dfs(path, used)
+            path.pop()
+            used.remove(x)
+
+    dfs([], set())
+    return result
+```
+
+### 8. Topological sort (post-order DFS on DAG)
+
+Run DFS; after finishing each node, append it to the result. Reverse the result for topological order.
+
+```python
+def topological_sort(graph: dict) -> list[int]:
+    """Returns topological order (reverse of DFS post-order). Assumes DAG."""
+    result: list[int] = []
+    visited = set()
+
+    def dfs(node: int) -> None:
+        visited.add(node)
+        for neighbor in graph.get(node, []):
+            if neighbor not in visited:
+                dfs(neighbor)
+        result.append(node)
+
+    for v in graph:
+        if v not in visited:
+            dfs(v)
+    result.reverse()
+    return result
+```
+
+### 9. Tree DFS (preorder / inorder / postorder)
+
+Same idea as [Tree Algorithm](#tree-algorithm): recurse on left and right; process node before, between, or after children.
+
+```python
+def preorder(root: "TreeNode | None") -> list[int]:
+    if not root:
+        return []
+    return [root.val] + preorder(root.left) + preorder(root.right)
+
+def inorder(root: "TreeNode | None") -> list[int]:
+    if not root:
+        return []
+    return inorder(root.left) + [root.val] + inorder(root.right)
+
+def postorder(root: "TreeNode | None") -> list[int]:
+    if not root:
+        return []
+    return postorder(root.left) + postorder(root.right) + [root.val]
+```
+
+### Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Graph vs tree** | In graphs, always track `visited` to avoid infinite loops; in trees no need (no cycles). |
+| **Iterative DFS** | Push neighbors in **reverse** order if you want the same order as recursive DFS. |
+| **Backtracking** | Restore state (e.g. `path.pop()`, `used.remove(x)`) after the recursive call. |
+| **Directed cycle** | Use three states (unvisited / in stack / done); cycle iff edge to “in stack” node. |
+| **Topological sort** | Only valid on DAGs; run post-order DFS and reverse, or use in-degree queue (BFS). |
+
+### Related sections and problems
+
+- Tree traversals: [Tree Algorithm](#tree-algorithm), [Binary Tree Algorithm](#binary-tree-algorithm).
+- BFS and shortest paths: [Graph Algorithms](#graph-algorithms).
+- Backtracking paradigms: [Algorithm Design Paradigms](#algorithm-design-paradigms).
+- LeetCode-style problems: Number of Islands, Clone Graph, Course Schedule, Subsets, Permutations, Word Search (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
