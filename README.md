@@ -16,31 +16,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 5. [Binary Search Algorithm](#binary-search-algorithm)
 6. [Stack Algorithms](#stack-algorithms)
 7. [Queue Algorithms](#queue-algorithms)
-8. [Sorting Algorithms](#sorting-algorithms)
-9. [Searching Algorithms](#searching-algorithms)
-10. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-11. [Array Algorithms](#array-algorithms)
-12. [Graph Algorithms](#graph-algorithms)
+8. [Heap Algorithms](#heap-algorithms)
+9. [Sorting Algorithms](#sorting-algorithms)
+10. [Searching Algorithms](#searching-algorithms)
+11. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+12. [Array Algorithms](#array-algorithms)
+13. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-13. [Fundamental Data Structures](#fundamental-data-structures)
+14. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-14. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-15. [Optimization Techniques](#optimization-techniques)
-16. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-17. [Cryptographic Algorithms](#cryptographic-algorithms)
-18. [Data Compression Algorithms](#data-compression-algorithms)
-19. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-20. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-21. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-22. [Specialized Application Algorithms](#specialized-application-algorithms)
+15. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+16. [Optimization Techniques](#optimization-techniques)
+17. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+18. [Cryptographic Algorithms](#cryptographic-algorithms)
+19. [Data Compression Algorithms](#data-compression-algorithms)
+20. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+21. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+22. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+23. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-23. [Solved Problems Index](#solved-problems-index)
+24. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-24. [Further Reading and Study Resources](#further-reading-and-study-resources)
+25. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -720,6 +721,249 @@ print(s.empty())  # False
 
 - Data structure details: [Fundamental Data Structures](#fundamental-data-structures) (Queue subsection).
 - Typical LeetCode problems: Number of Recent Calls, Time Needed to Buy Tickets, Rotting Oranges, Binary Tree Level Order Traversal, Sliding Window Maximum (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## Heap Algorithms
+
+A **heap** (binary heap) is a complete binary tree where each node is **≥** (max-heap) or **≤** (min-heap) its children. The root is thus the maximum or minimum element. Heaps support fast insertion and extraction of the extremal value, making them ideal for **priority queues**, **top-k**, and **incremental ordering** problems.
+
+In Python, `heapq` provides a **min-heap** only; for a max-heap, negate values or use a custom comparator.
+
+### Operations and complexity
+
+| Operation        | Time    | Notes |
+|------------------|---------|--------|
+| Push (insert)    | O(log n)| Bubble up to restore heap property. |
+| Pop (extract min/max) | O(log n) | Replace root with last leaf, then bubble down. |
+| Peek (min/max)   | O(1)    | Root of the heap. |
+| Heapify (array → heap) | O(n) | Bottom-up heapify, not n × log n. |
+
+Space: **O(n)** for n elements.
+
+### When to use
+
+- **Priority queue**: process items by priority (e.g. Dijkstra, scheduling).
+- **Top K** (or K smallest/largest): keep a heap of size K.
+- **Merge K sorted lists**: heap of front elements from each list.
+- **Median / percentiles**: two heaps (max-heap for lower half, min-heap for upper half).
+- **N-way merge** or **streaming** “best next” choices.
+
+### 1. Basic min-heap with `heapq`
+
+Python’s `heapq` uses a list; the smallest element is always at index 0.
+
+```python
+import heapq
+
+# Build min-heap from list (in-place, O(n))
+nums = [3, 1, 4, 1, 5, 9, 2, 6]
+heapq.heapify(nums)
+# nums is now a min-heap; nums[0] == 1
+
+# Push and pop
+heapq.heappush(nums, 0)
+print(heapq.heappop(nums))  # 0
+print(heapq.heappop(nums))  # 1
+
+# Peek smallest without removing
+if nums:
+    print(nums[0])  # 1
+```
+
+### 2. Max-heap by negating values
+
+`heapq` is min-heap only; negate keys for max-heap behavior.
+
+```python
+import heapq
+
+def max_heap_push(heap, value):
+    heapq.heappush(heap, -value)
+
+def max_heap_pop(heap):
+    return -heapq.heappop(heap)
+
+def max_heap_peek(heap):
+    return -heap[0] if heap else None
+
+# Example: keep largest 3
+arr = [4, 1, 7, 3, 9, 2, 6]
+max_heap: list[int] = []
+for x in arr:
+    max_heap_push(max_heap, x)
+    if len(max_heap) > 3:
+        max_heap_pop(max_heap)
+
+print([max_heap_pop(max_heap) for _ in range(3)])  # [9, 7, 6] (order may vary when popping)
+# Or just read: top 3 are 9, 7, 6
+```
+
+### 3. Top K largest elements (min-heap of size K)
+
+Keep only K elements in a min-heap; the root is the K-th largest. New elements larger than the root replace it.
+
+```python
+import heapq
+
+def top_k_largest(nums: list[int], k: int) -> list[int]:
+    if k <= 0 or not nums:
+        return []
+    if k >= len(nums):
+        return sorted(nums, reverse=True)
+
+    heap = nums[:k]
+    heapq.heapify(heap)  # min-heap of first k
+
+    for x in nums[k:]:
+        if x > heap[0]:
+            heapq.heapreplace(heap, x)  # pop smallest, push x
+
+    return sorted(heap, reverse=True)
+
+# Example
+nums = [3, 2, 1, 5, 6, 4]
+print(top_k_largest(nums, 2))   # [6, 5]
+print(top_k_largest(nums, 3))   # [6, 5, 4]
+```
+
+### 4. Merge K sorted lists
+
+Use a min-heap of (value, list_index, element_index). Each pop gives the next smallest; push the next element from that list.
+
+```python
+import heapq
+
+def merge_k_sorted(lists: list[list[int]]) -> list[int]:
+    # Min-heap: (value, list_idx, element_idx)
+    h: list[tuple[int, int, int]] = []
+    for i, lst in enumerate(lists):
+        if lst:
+            heapq.heappush(h, (lst[0], i, 0))
+
+    result = []
+    while h:
+        val, li, ei = heapq.heappop(h)
+        result.append(val)
+        if ei + 1 < len(lists[li]):
+            next_val = lists[li][ei + 1]
+            heapq.heappush(h, (next_val, li, ei + 1))
+
+    return result
+
+# Example
+lists = [[1, 4, 7], [2, 5, 8], [3, 6, 9]]
+print(merge_k_sorted(lists))  # [1, 2, 3, 4, 5, 6, 7, 8, 9]
+```
+
+### 5. Kth largest element (quick-select style with heap)
+
+Build a min-heap of size K from the first K elements; for the rest, if larger than the root, replace root. The root is the K-th largest.
+
+```python
+import heapq
+
+def find_kth_largest(nums: list[int], k: int) -> int:
+    if not nums or k < 1 or k > len(nums):
+        raise ValueError("invalid k or empty nums")
+
+    heap = nums[:k]
+    heapq.heapify(heap)
+
+    for x in nums[k:]:
+        if x > heap[0]:
+            heapq.heapreplace(heap, x)
+
+    return heap[0]
+
+# Example
+nums = [3, 2, 1, 5, 6, 4]
+print(find_kth_largest(nums, 2))  # 5
+print(find_kth_largest(nums, 1))  # 6
+```
+
+### 6. Heap sort (max-heap, in-place idea)
+
+Build a max-heap, then repeatedly swap root with last element, shrink heap, and sift down. Results in ascending order.
+
+```python
+def heapify_down(arr: list[int], n: int, i: int) -> None:
+    """Max-heap: sift down node at index i in heap of size n."""
+    largest = i
+    left = 2 * i + 1
+    right = 2 * i + 2
+
+    if left < n and arr[left] > arr[largest]:
+        largest = left
+    if right < n and arr[right] > arr[largest]:
+        largest = right
+    if largest != i:
+        arr[i], arr[largest] = arr[largest], arr[i]
+        heapify_down(arr, n, largest)
+
+def heap_sort(arr: list[int]) -> None:
+    n = len(arr)
+    # Build max-heap
+    for i in range(n // 2 - 1, -1, -1):
+        heapify_down(arr, n, i)
+    # Extract max repeatedly
+    for size in range(n - 1, 0, -1):
+        arr[0], arr[size] = arr[size], arr[0]
+        heapify_down(arr, size, 0)
+
+# Example
+arr = [12, 11, 13, 5, 6, 7]
+heap_sort(arr)
+print(arr)  # [5, 6, 7, 11, 12, 13]
+```
+
+### 7. Find median from a data stream (two heaps)
+
+Maintain a **max-heap** for the lower half and a **min-heap** for the upper half. Keep sizes balanced (or low has at most one more). Median is the max of the lower or the average of the two roots.
+
+```python
+import heapq
+
+class MedianFinder:
+    def __init__(self):
+        self.lo: list[int] = []   # max-heap (negated values)
+        self.hi: list[int] = []  # min-heap
+
+    def add_num(self, num: int) -> None:
+        heapq.heappush(self.lo, -num)
+        # Balance: move max of lo to hi
+        heapq.heappush(self.hi, -heapq.heappop(self.lo))
+        if len(self.lo) < len(self.hi):
+            heapq.heappush(self.lo, -heapq.heappop(self.hi))
+
+    def find_median(self) -> float:
+        if len(self.lo) > len(self.hi):
+            return -self.lo[0]
+        return (-self.lo[0] + self.hi[0]) / 2.0
+
+# Example
+mf = MedianFinder()
+for x in [1, 2, 3, 4, 5]:
+    mf.add_num(x)
+print(mf.find_median())  # 3.0
+```
+
+### 8. Implementation notes and patterns
+
+| Pattern / Use case        | Idea                                                                 |
+|---------------------------|----------------------------------------------------------------------|
+| Min-heap in Python       | `heapq`: list as heap; `heapify`, `heappush`, `heappop`, `heapreplace`. |
+| Max-heap                 | Store negated values in a min-heap; negate when reading.             |
+| Top K / Kth largest      | Min-heap of size K; drop smallest when adding a larger element.      |
+| Merge K sorted           | Heap of (value, list_id, index); pop min, push next from same list.  |
+| Median from stream       | Max-heap for lower half, min-heap for upper; keep sizes balanced.    |
+| Heap sort                | Build max-heap, then repeatedly extract max to the end.              |
+
+### Related sections and problems
+
+- Data structure details: [Fundamental Data Structures](#fundamental-data-structures) (Heap subsection).
+- Sorting: [Sorting Algorithms](#sorting-algorithms) (heap sort).
+- Typical LeetCode problems: Kth Largest Element, Merge K Sorted Lists, Find Median from Data Stream, Top K Frequent Elements, Last Stone Weight (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
