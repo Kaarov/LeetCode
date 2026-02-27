@@ -26,31 +26,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 15. [Merge Sort Algorithm](#merge-sort-algorithm)
 16. [Two Pointers Algorithm](#two-pointers-algorithm)
 17. [Sliding Window Algorithm](#sliding-window-algorithm)
-18. [Sorting Algorithms](#sorting-algorithms)
-19. [Searching Algorithms](#searching-algorithms)
-20. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-21. [Array Algorithms](#array-algorithms)
-22. [Graph Algorithms](#graph-algorithms)
+18. [Tree Algorithm](#tree-algorithm)
+19. [Sorting Algorithms](#sorting-algorithms)
+20. [Searching Algorithms](#searching-algorithms)
+21. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+22. [Array Algorithms](#array-algorithms)
+23. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-23. [Fundamental Data Structures](#fundamental-data-structures)
+24. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-24. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-25. [Optimization Techniques](#optimization-techniques)
-26. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-27. [Cryptographic Algorithms](#cryptographic-algorithms)
-28. [Data Compression Algorithms](#data-compression-algorithms)
-29. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-30. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-31. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-32. [Specialized Application Algorithms](#specialized-application-algorithms)
+25. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+26. [Optimization Techniques](#optimization-techniques)
+27. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+28. [Cryptographic Algorithms](#cryptographic-algorithms)
+29. [Data Compression Algorithms](#data-compression-algorithms)
+30. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+31. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+32. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+33. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-33. [Solved Problems Index](#solved-problems-index)
+34. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-34. [Further Reading and Study Resources](#further-reading-and-study-resources)
+35. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -2816,6 +2817,177 @@ print(sliding_window_max([1, 3, -1, -3, 5, 3, 6, 7], 3))  # [3, 3, 5, 5, 6, 7]
 - Deque for max/min in window: [Queue Algorithms](#queue-algorithms).
 - String windows: [String Algorithms](#string-algorithms).
 - Typical LeetCode problems: Maximum Average Subarray I, Longest Substring Without Repeating Characters, Minimum Size Subarray Sum, Sliding Window Maximum, Longest Repeating Character Replacement (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## Tree Algorithm
+
+**Tree algorithms** work on hierarchical structures: each **node** has a value and zero or more **children**. In a **binary tree** each node has at most two children (left and right). **Binary search trees (BST)** impose an ordering (left < root < right). Common operations are **traversal** (visit every node), **height/depth**, **path sum**, and **lowest common ancestor (LCA)**. Traversals can be **DFS** (depth-first: preorder, inorder, postorder) or **BFS** (level-order).
+
+### Complexity (typical)
+
+| Operation | Time | Space |
+|-----------|------|--------|
+| Traverse all nodes | O(n) | O(h) stack (DFS) or O(w) queue (BFS); h = height, w = max level width. |
+| Search in BST | O(h) | O(h) recursive, O(1) iterative with a pointer. |
+| Insert/Delete in BST | O(h) | O(h). |
+
+### When to use
+
+- **DFS (recursive or stack)**: path problems, subtree checks, pre/in/post order.
+- **BFS (queue)**: level-order, shortest path in unweighted tree, “level by level” output.
+- **BST**: search, insert, delete, inorder (sorted order), range queries.
+
+### 1. TreeNode and basic structure
+
+```python
+from __future__ import annotations
+
+class TreeNode:
+    def __init__(self, val: int = 0, left: TreeNode | None = None, right: TreeNode | None = None):
+        self.val = val
+        self.left = left
+        self.right = right
+```
+
+### 2. DFS: Preorder, Inorder, Postorder
+
+```python
+def preorder(root: TreeNode | None) -> list[int]:
+    """Root -> Left -> Right."""
+    if not root:
+        return []
+    return [root.val] + preorder(root.left) + preorder(root.right)
+
+def inorder(root: TreeNode | None) -> list[int]:
+    """Left -> Root -> Right. For BST this gives sorted order."""
+    if not root:
+        return []
+    return inorder(root.left) + [root.val] + inorder(root.right)
+
+def postorder(root: TreeNode | None) -> list[int]:
+    """Left -> Right -> Root."""
+    if not root:
+        return []
+    return postorder(root.left) + postorder(root.right) + [root.val]
+
+# Example: tree    1
+#                 / \
+#                2   3
+#               / \
+#              4   5
+# preorder: [1, 2, 4, 5, 3]; inorder: [4, 2, 5, 1, 3]; postorder: [4, 5, 2, 3, 1]
+```
+
+### 3. BFS (level-order)
+
+```python
+from collections import deque
+
+def level_order(root: TreeNode | None) -> list[list[int]]:
+    """Return list of levels (each level is a list of values)."""
+    if not root:
+        return []
+    result = []
+    q = deque([root])
+    while q:
+        level = []
+        for _ in range(len(q)):
+            node = q.popleft()
+            level.append(node.val)
+            if node.left:
+                q.append(node.left)
+            if node.right:
+                q.append(node.right)
+        result.append(level)
+    return result
+```
+
+### 4. Maximum depth (height)
+
+```python
+def max_depth(root: TreeNode | None) -> int:
+    if not root:
+        return 0
+    return 1 + max(max_depth(root.left), max_depth(root.right))
+```
+
+### 5. Same tree (structural and value equality)
+
+```python
+def is_same_tree(p: TreeNode | None, q: TreeNode | None) -> bool:
+    if p is None and q is None:
+        return True
+    if p is None or q is None:
+        return False
+    return p.val == q.val and is_same_tree(p.left, q.left) and is_same_tree(p.right, q.right)
+```
+
+### 6. Invert (mirror) binary tree
+
+```python
+def invert_tree(root: TreeNode | None) -> TreeNode | None:
+    if not root:
+        return None
+    root.left, root.right = invert_tree(root.right), invert_tree(root.left)
+    return root
+```
+
+### 7. Lowest common ancestor (LCA) of two nodes
+
+```python
+def lowest_common_ancestor(root: TreeNode | None, p: TreeNode, q: TreeNode) -> TreeNode | None:
+    """Assume p and q exist in tree. LCA is the deepest node that has both p and q as descendants."""
+    if not root or root is p or root is q:
+        return root
+    left = lowest_common_ancestor(root.left, p, q)
+    right = lowest_common_ancestor(root.right, p, q)
+    if left and right:
+        return root
+    return left or right
+```
+
+### 8. Path sum (root-to-leaf sum equals target)
+
+```python
+def has_path_sum(root: TreeNode | None, target: int) -> bool:
+    if not root:
+        return False
+    if not root.left and not root.right:
+        return root.val == target
+    rem = target - root.val
+    return has_path_sum(root.left, rem) or has_path_sum(root.right, rem)
+```
+
+### 9. Validate BST (inorder or min/max range)
+
+```python
+def is_valid_bst(root: TreeNode | None, lo: int | None = None, hi: int | None = None) -> bool:
+    """Check if tree is a valid BST. Pass optional lo, hi to bound node values."""
+    if not root:
+        return True
+    if lo is not None and root.val <= lo:
+        return False
+    if hi is not None and root.val >= hi:
+        return False
+    return is_valid_bst(root.left, lo, root.val) and is_valid_bst(root.right, root.val, hi)
+```
+
+### 10. Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Null checks** | Always handle `root is None` (or `not root`) before accessing `root.left`/`root.right`. |
+| **Leaf node** | Often defined as `not root.left and not root.right`. |
+| **BST property** | For “valid BST” use range (lo, hi) per node; or do inorder and check strictly increasing. |
+| **LCA** | If one of p, q is the root, root is LCA; if p and q are in different subtrees, root is LCA. |
+| **Iterative DFS/BFS** | Use an explicit stack for DFS or queue for BFS to avoid recursion stack overflow on deep trees. |
+
+### Related sections and problems
+
+- Data structures: [Fundamental Data Structures](#fundamental-data-structures) (Trees, BST).
+- Graph traversal: [Graph Algorithms](#graph-algorithms) (BFS/DFS).
+- Typical LeetCode problems: Maximum Depth of Binary Tree, Same Tree, Invert Binary Tree, Lowest Common Ancestor of a Binary Tree, Path Sum, Validate Binary Search Tree, Binary Tree Level Order Traversal (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
