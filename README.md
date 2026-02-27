@@ -5467,16 +5467,183 @@ def lemonade_change(bills: list[int]) -> bool:
 
 ## Numerical and Scientific Algorithms
 
-Focuses on algorithms for continuous mathematics: root finding, integration, differential equations, linear algebraic systems, and spectral analysis. Clarifies stability, convergence rates, and error bounds essential for scientific computing.
+**Numerical and scientific algorithms** deal with continuous mathematics: **root finding**, **numerical integration**, **linear algebra**, and related tasks where exact symbolic answers are unavailable or expensive. Stability, convergence criteria, and floating-point error matter in practice.
 
-### Key Concepts
-- Root Finding (Newton-Raphson, Bisection)
-- Numerical Integration
-- Linear Algebra Operations
-- Matrix Computations
+### When to use
 
-### Related Problems
-*See [Solved Problems Index](#solved-problems-index) for implementations*
+| Task | Typical methods |
+|------|------------------|
+| **Root finding** f(x)=0 | Bisection (robust), Newton–Raphson (fast when derivative available). |
+| **Numerical integration** ∫f | Trapezoidal rule, Simpson’s rule; adaptive quadrature for accuracy. |
+| **Linear systems** Ax=b | Gaussian elimination, LU; for large/sparse: iterative (e.g. conjugate gradient). |
+| **Eigenvalues / eigenvectors** | Power iteration (largest eigenvalue), QR algorithm; use libraries for production. |
+| **Differential equations** | Euler, Runge–Kutta; stability and step size matter. |
+
+### Convergence and stability
+
+- **Tolerance**: Stop when |x_new − x_old| < ε or |f(x)| < ε.
+- **Iteration limit**: Cap iterations to avoid infinite loops from non-convergence.
+- **Bisection**: Always converges for continuous f when f(a)·f(b) < 0; linear convergence.
+- **Newton**: Quadratic convergence near a simple root; can diverge if started far or derivative ≈ 0.
+
+### 1. Bisection (root finding)
+
+Halve the interval [a, b] where f(a)·f(b) < 0; choose the half that still brackets the root. Guaranteed convergence for continuous f.
+
+```python
+def bisection(f, a: float, b: float, tol: float = 1e-9, max_iter: int = 100) -> float:
+    """Find a root of f in [a,b] assuming f(a)*f(b) < 0."""
+    if f(a) * f(b) >= 0:
+        raise ValueError("f(a) and f(b) must have opposite signs")
+    for _ in range(max_iter):
+        c = (a + b) / 2
+        if abs(b - a) < tol or abs(f(c)) < tol:
+            return c
+        if f(c) * f(a) < 0:
+            b = c
+        else:
+            a = c
+    return (a + b) / 2
+
+# Example: sqrt(2) as root of x^2 - 2
+print(bisection(lambda x: x*x - 2, 0, 2))  # ~1.414...
+```
+
+### 2. Newton–Raphson (root finding)
+
+Iterate x_{n+1} = x_n − f(x_n)/f'(x_n). Fast when derivative is available and initial guess is good.
+
+```python
+def newton_raphson(f, df, x0: float, tol: float = 1e-9, max_iter: int = 50) -> float:
+    """Find root of f using derivative df."""
+    x = x0
+    for _ in range(max_iter):
+        fx, dfx = f(x), df(x)
+        if abs(fx) < tol:
+            return x
+        if abs(dfx) < 1e-14:
+            break
+        x = x - fx / dfx
+    return x
+
+# Example: sqrt(2) via x^2 - 2, derivative 2*x
+print(newton_raphson(lambda x: x*x - 2, lambda x: 2*x, 1.0))  # ~1.414...
+```
+
+### 3. Trapezoidal rule (numerical integration)
+
+Approximate ∫_a^b f(x) dx by (b−a)/2 · (f(a) + f(b)). Composite: divide [a,b] into n subintervals and sum trapezoid areas.
+
+```python
+def trapezoidal(f, a: float, b: float, n: int) -> float:
+    """Composite trapezoidal rule with n subintervals."""
+    h = (b - a) / n
+    total = (f(a) + f(b)) / 2
+    for i in range(1, n):
+        total += f(a + i * h)
+    return total * h
+
+# Example: integral of x^2 from 0 to 1 = 1/3
+print(trapezoidal(lambda x: x*x, 0, 1, 100))  # ~0.333...
+```
+
+### 4. Simpson’s rule (numerical integration)
+
+On each pair of subintervals, approximate f by a parabola; error O(h^4) for smooth f.
+
+```python
+def simpson(f, a: float, b: float, n: int) -> float:
+    """Composite Simpson's rule; n must be even."""
+    if n % 2 != 0:
+        n += 1
+    h = (b - a) / n
+    x = [a + i * h for i in range(n + 1)]
+    total = f(x[0]) + f(x[n])
+    for i in range(1, n):
+        total += f(x[i]) * (4 if i % 2 == 1 else 2)
+    return total * h / 3
+
+print(simpson(lambda x: x*x, 0, 1, 100))  # ~0.333...
+```
+
+### 5. Power iteration (largest eigenvalue)
+
+Repeatedly compute v := A·v, then normalize. Under mild conditions, v converges to the eigenvector of the largest-magnitude eigenvalue.
+
+```python
+def power_iteration(A: list[list[float]], max_iter: int = 100, tol: float = 1e-9) -> tuple[float, list[float]]:
+    """Estimate largest-magnitude eigenvalue and corresponding eigenvector."""
+    n = len(A)
+    v = [1.0] * n
+    for _ in range(max_iter):
+        u = [sum(A[i][j] * v[j] for j in range(n)) for i in range(n)]
+        norm = sum(x*x for x in u) ** 0.5
+        if norm < 1e-14:
+            break
+        v = [x / norm for x in u]
+    # Rayleigh quotient
+    lam = sum(sum(A[i][j] * v[j] for j in range(n)) * v[i] for i in range(n))
+    return lam, v
+```
+
+### 6. Gaussian elimination (solve Ax = b)
+
+Row reduce augmented matrix [A|b] to upper triangular form, then back-substitute. O(n³) for n×n system.
+
+```python
+def gaussian_elimination(A: list[list[float]], b: list[float]) -> list[float]:
+    """Solve Ax = b (in-place style; assumes unique solution)."""
+    n = len(b)
+    aug = [A[i][:] + [b[i]] for i in range(n)]
+    for col in range(n):
+        pivot = max(range(col, n), key=lambda i: abs(aug[i][col]))
+        aug[col], aug[pivot] = aug[pivot], aug[col]
+        for row in range(col + 1, n):
+            factor = aug[row][col] / aug[col][col]
+            for j in range(col, n + 1):
+                aug[row][j] -= factor * aug[col][j]
+    x = [0.0] * n
+    for i in range(n - 1, -1, -1):
+        x[i] = aug[i][n]
+        for j in range(i + 1, n):
+            x[i] -= aug[i][j] * x[j]
+        x[i] /= aug[i][i]
+    return x
+```
+
+### 7. Euler method (ODE initial value)
+
+Approximate y(t + h) ≈ y(t) + h·f(t, y). First-order; small h for accuracy, stability limits step size for stiff problems.
+
+```python
+def euler(f, t0: float, y0: float, h: float, n: int) -> list[tuple[float, float]]:
+    """Euler method for dy/dt = f(t,y), initial (t0, y0), n steps of size h."""
+    result = [(t0, y0)]
+    t, y = t0, y0
+    for _ in range(n):
+        y = y + h * f(t, y)
+        t += h
+        result.append((t, y))
+    return result
+
+# Example: dy/dt = y, y(0)=1 -> y(t)=e^t
+print(euler(lambda t, y: y, 0, 1, 0.1, 10)[-1])  # (1.0, ~2.59)
+```
+
+### Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Tolerance** | Use relative and/or absolute tolerance; avoid comparing floats with ==. |
+| **Bisection** | Requires sign change; use when derivative is unavailable or Newton is unstable. |
+| **Newton** | Check derivative ≠ 0; use fallback (e.g. bisection) or better initial guess if it diverges. |
+| **Integration** | Increase n or use adaptive quadrature for better accuracy; Simpson is often better than trapezoidal. |
+| **Production** | Prefer libraries (NumPy/SciPy) for linear algebra, integration, and ODEs. |
+
+### Related sections and problems
+
+- Optimization: [Optimization Techniques](#optimization-techniques) (gradient descent, etc.).
+- For heavy numerical work: use SciPy/NumPy; this section gives the core ideas only.
 
 ---
 
