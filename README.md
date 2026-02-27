@@ -23,31 +23,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 12. [Hash Algorithm](#hash-algorithm)
 13. [Prefix Sum Algorithm](#prefix-sum-algorithm)
 14. [Counting Sort Algorithm](#counting-sort-algorithm)
-15. [Sorting Algorithms](#sorting-algorithms)
-16. [Searching Algorithms](#searching-algorithms)
-17. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-18. [Array Algorithms](#array-algorithms)
-19. [Graph Algorithms](#graph-algorithms)
+15. [Merge Sort Algorithm](#merge-sort-algorithm)
+16. [Sorting Algorithms](#sorting-algorithms)
+17. [Searching Algorithms](#searching-algorithms)
+18. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+19. [Array Algorithms](#array-algorithms)
+20. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-20. [Fundamental Data Structures](#fundamental-data-structures)
+21. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-21. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-22. [Optimization Techniques](#optimization-techniques)
-23. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-24. [Cryptographic Algorithms](#cryptographic-algorithms)
-25. [Data Compression Algorithms](#data-compression-algorithms)
-26. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-27. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-28. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-29. [Specialized Application Algorithms](#specialized-application-algorithms)
+22. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+23. [Optimization Techniques](#optimization-techniques)
+24. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+25. [Cryptographic Algorithms](#cryptographic-algorithms)
+26. [Data Compression Algorithms](#data-compression-algorithms)
+27. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+28. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+29. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+30. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-30. [Solved Problems Index](#solved-problems-index)
+31. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-31. [Further Reading and Study Resources](#further-reading-and-study-resources)
+32. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -2205,6 +2206,228 @@ print(arr)  # [1, 1, 2, 3, 3]
 - Other sorts: [Sorting Algorithms](#sorting-algorithms) (comparison-based and counting sort mention).
 - Radix sort often uses counting sort as a stable subroutine for each digit.
 - Typical LeetCode problems: Sort an Array (when range is small), custom sort orders with integer keys (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## Merge Sort Algorithm
+
+**Merge sort** is a **divide-and-conquer** comparison sort. It splits the array into two halves, recursively sorts each half (until length ≤ 1), then **merges** the two sorted halves into one sorted array. It runs in **O(n log n)** time in all cases and is **stable** if the merge step compares with `≤`. Extra space is **O(n)** for the merge buffer (or for left/right copies in a typical implementation).
+
+### Complexity
+
+| Metric | Value | Notes |
+|--------|--------|--------|
+| Time (best / average / worst) | O(n log n) | No worst-case slowdown. |
+| Space | O(n) | For temporary arrays during merge (or O(log n) stack if in-place merge is used). |
+| Stable | Yes | When merge uses `<=` for choosing from left. |
+
+### When to use
+
+- You need **stable** sorting with guaranteed O(n log n).
+- **Linked lists**: merge sort is well-suited (O(1) extra space per node for split/merge with pointers).
+- **Inversion count** and other “while merging, count cross-half pairs” problems.
+- **External sort**: merge large files in passes.
+
+### 1. Recursive merge sort (classic)
+
+Split into left/right, sort recursively, then merge into a new list (or back into the original with an auxiliary buffer).
+
+```python
+def merge(left: list[int], right: list[int]) -> list[int]:
+    """Merge two sorted lists into one sorted list. Stable if left elements preferred on tie."""
+    result = []
+    i = j = 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
+
+def merge_sort(arr: list[int]) -> list[int]:
+    """Return a new sorted list. Original unchanged."""
+    if len(arr) <= 1:
+        return arr.copy()
+    mid = len(arr) // 2
+    left = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
+    return merge(left, right)
+
+# Example
+arr = [38, 27, 43, 3, 9, 82, 10]
+print(merge_sort(arr))  # [3, 9, 10, 27, 38, 43, 82]
+```
+
+### 2. In-place style (sort in a buffer, copy back)
+
+To sort the array in place, use an auxiliary buffer of size n; merge into the buffer, then copy back. Below: sort ranges of `arr` using `temp` as scratch.
+
+```python
+def merge_into(arr: list[int], temp: list[int], left: int, mid: int, right: int) -> None:
+    """Merge arr[left:mid] and arr[mid:right] into temp[left:right], then copy back to arr."""
+    i, j, k = left, mid, left
+    while i < mid and j < right:
+        if arr[i] <= arr[j]:
+            temp[k] = arr[i]
+            i += 1
+        else:
+            temp[k] = arr[j]
+            j += 1
+        k += 1
+    while i < mid:
+        temp[k] = arr[i]
+        i += 1
+        k += 1
+    while j < right:
+        temp[k] = arr[j]
+        j += 1
+        k += 1
+    for k in range(left, right):
+        arr[k] = temp[k]
+
+def merge_sort_inplace(arr: list[int], temp: list[int] | None = None, left: int = 0, right: int | None = None) -> None:
+    """Sort arr[left:right] in place using temp as buffer."""
+    if right is None:
+        right = len(arr)
+    if temp is None:
+        temp = [0] * len(arr)
+    if right - left <= 1:
+        return
+    mid = (left + right) // 2
+    merge_sort_inplace(arr, temp, left, mid)
+    merge_sort_inplace(arr, temp, mid, right)
+    merge_into(arr, temp, left, mid, right)
+
+# Example
+arr = [38, 27, 43, 3, 9, 82, 10]
+merge_sort_inplace(arr)
+print(arr)  # [3, 9, 10, 27, 38, 43, 82]
+```
+
+### 3. Merge two sorted arrays (two-pointer)
+
+Same as the `merge` subroutine: two pointers, append the smaller (or equal from first to keep stability), then append the remainder.
+
+```python
+def merge_two_sorted(a: list[int], b: list[int]) -> list[int]:
+    i = j = 0
+    out = []
+    while i < len(a) and j < len(b):
+        if a[i] <= b[j]:
+            out.append(a[i])
+            i += 1
+        else:
+            out.append(b[j])
+            j += 1
+    out.extend(a[i:])
+    out.extend(b[j:])
+    return out
+
+# Example
+print(merge_two_sorted([1, 3, 5], [2, 4, 6]))  # [1, 2, 3, 4, 5, 6]
+```
+
+### 4. Count inversions (while merging)
+
+An **inversion** is a pair (i, j) with i < j and arr[i] > arr[j]. During merge, when we take an element from the right half, it is smaller than all remaining elements in the left half—count them.
+
+```python
+def merge_and_count(left: list[int], right: list[int]) -> tuple[list[int], int]:
+    """Merge two sorted lists and count inversions (right elements before left elements)."""
+    result = []
+    i = j = 0
+    inversions = 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            inversions += len(left) - i  # all remaining left are greater than right[j]
+            j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result, inversions
+
+def count_inversions(arr: list[int]) -> tuple[list[int], int]:
+    """Return sorted array and total inversion count."""
+    if len(arr) <= 1:
+        return arr.copy(), 0
+    mid = len(arr) // 2
+    left_sorted, left_inv = count_inversions(arr[:mid])
+    right_sorted, right_inv = count_inversions(arr[mid:])
+    merged, merge_inv = merge_and_count(left_sorted, right_sorted)
+    return merged, left_inv + right_inv + merge_inv
+
+# Example
+arr = [2, 4, 1, 3, 5]
+sorted_arr, inv = count_inversions(arr)
+print(sorted_arr, inv)  # [1, 2, 3, 4, 5] 3
+```
+
+### 5. Bottom-up (iterative) merge sort
+
+No recursion: merge subarrays of size 1, then 2, then 4, etc., until the whole array is sorted.
+
+```python
+def merge_sort_bottom_up(arr: list[int]) -> None:
+    """Sort arr in place using iterative merge (double the width each pass)."""
+    n = len(arr)
+    temp = [0] * n
+    width = 1
+    while width < n:
+        for start in range(0, n, 2 * width):
+            left = start
+            mid = min(start + width, n)
+            right = min(start + 2 * width, n)
+            if mid >= right:
+                continue
+            i, j, k = left, mid, left
+            while i < mid and j < right:
+                if arr[i] <= arr[j]:
+                    temp[k] = arr[i]
+                    i += 1
+                else:
+                    temp[k] = arr[j]
+                    j += 1
+                k += 1
+            while i < mid:
+                temp[k] = arr[i]
+                i += 1
+                k += 1
+            while j < right:
+                temp[k] = arr[j]
+                j += 1
+                k += 1
+            for k in range(left, right):
+                arr[k] = temp[k]
+        width *= 2
+
+# Example
+arr = [38, 27, 43, 3, 9, 82, 10]
+merge_sort_bottom_up(arr)
+print(arr)  # [3, 9, 10, 27, 38, 43, 82]
+```
+
+### 6. Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Stability** | In merge, use `left[i] <= right[j]` (take from left on tie) so equal elements from the left half stay before those from the right. |
+| **Mid index** | Use `mid = (left + right) // 2` for split; merge `arr[left:mid]` and `arr[mid:right]` to avoid off-by-one. |
+| **Auxiliary space** | Recursive version that returns new lists uses O(n log n) total allocations; in-place style with one buffer uses O(n). |
+| **Base case** | Length 0 or 1: return (or do nothing) to avoid infinite recursion. |
+| **Bottom-up** | Loop by `width`; merge pairs of segments of size `width`; double `width` each pass. |
+
+### Related sections and problems
+
+- Other sorts: [Sorting Algorithms](#sorting-algorithms), [Counting Sort Algorithm](#counting-sort-algorithm).
+- Divide and conquer: [Algorithm Design Paradigms](#algorithm-design-paradigms).
+- Typical LeetCode problems: Sort an Array, Merge Two Sorted Lists, Count of Smaller Numbers After Self (merge-sort idea), Reverse Pairs (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
