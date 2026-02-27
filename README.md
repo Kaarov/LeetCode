@@ -22,31 +22,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 11. [Linked List Algorithm](#linked-list-algorithm)
 12. [Hash Algorithm](#hash-algorithm)
 13. [Prefix Sum Algorithm](#prefix-sum-algorithm)
-14. [Sorting Algorithms](#sorting-algorithms)
-15. [Searching Algorithms](#searching-algorithms)
-16. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-17. [Array Algorithms](#array-algorithms)
-18. [Graph Algorithms](#graph-algorithms)
+14. [Counting Sort Algorithm](#counting-sort-algorithm)
+15. [Sorting Algorithms](#sorting-algorithms)
+16. [Searching Algorithms](#searching-algorithms)
+17. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+18. [Array Algorithms](#array-algorithms)
+19. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-19. [Fundamental Data Structures](#fundamental-data-structures)
+20. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-20. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-21. [Optimization Techniques](#optimization-techniques)
-22. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-23. [Cryptographic Algorithms](#cryptographic-algorithms)
-24. [Data Compression Algorithms](#data-compression-algorithms)
-25. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-26. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-27. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-28. [Specialized Application Algorithms](#specialized-application-algorithms)
+21. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+22. [Optimization Techniques](#optimization-techniques)
+23. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+24. [Cryptographic Algorithms](#cryptographic-algorithms)
+25. [Data Compression Algorithms](#data-compression-algorithms)
+26. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+27. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+28. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+29. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-29. [Solved Problems Index](#solved-problems-index)
+30. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-30. [Further Reading and Study Resources](#further-reading-and-study-resources)
+31. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -2032,6 +2033,178 @@ print(product_except_self([1, 2, 3, 4]))  # [24, 12, 8, 6]
 - Hash + prefix: [Hash Algorithm](#hash-algorithm) (subarray sum K).
 - Array tricks: [Array Algorithms](#array-algorithms).
 - Typical LeetCode problems: Subarray Sum Equals K, Find Pivot Index, Product of Array Except Self, Range Sum Query (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## Counting Sort Algorithm
+
+**Counting sort** is a **non-comparison** sorting algorithm. It counts how many times each key (value) appears, then places elements in order by iterating over the key range. It runs in **O(n + k)** time and **O(k)** extra space, where **n** = number of elements and **k** = range of keys (max − min + 1). It is **stable** if implemented with a cumulative count (prefix sum) and a backward pass when writing the output.
+
+### When to use
+
+- Keys are **integers** (or map to integers) in a **small range** (e.g. 0..max or min..max).
+- You need a **stable** sort and the range is small.
+- **Not** suitable when k is very large (e.g. full 32-bit integers with few elements); use comparison-based or radix sort instead.
+
+### Complexity
+
+| Step | Time | Space |
+|------|------|--------|
+| Count occurrences | O(n) | O(k) |
+| Build output (simple) | O(n + k) | O(n) for output |
+| Stable: prefix counts + backward pass | O(n + k) | O(n + k) |
+
+### 1. Basic counting sort (non-negative integers, small range)
+
+Assume elements are in `[0, max_val]`. Count, then write each value the right number of times in order.
+
+```python
+def counting_sort_basic(arr: list[int], max_val: int | None = None) -> list[int]:
+    """Sort non-negative integers in [0, max_val]. If max_val is None, use max(arr)."""
+    if not arr:
+        return []
+    if max_val is None:
+        max_val = max(arr)
+    count = [0] * (max_val + 1)
+    for x in arr:
+        count[x] += 1
+    result = []
+    for val in range(max_val + 1):
+        result.extend([val] * count[val])
+    return result
+
+# Example
+arr = [4, 2, 2, 8, 3, 3, 1]
+print(counting_sort_basic(arr))       # [1, 2, 2, 3, 3, 4, 8]
+print(counting_sort_basic(arr, 10))  # same
+```
+
+### 2. Stable counting sort (preserve order of equal elements)
+
+Use a **cumulative count** (prefix sum) so each key gets a range of output indices. Then iterate the **original array backwards** and place each element at the end of its range, then decrement the count. This keeps equal elements in their original order.
+
+```python
+def counting_sort_stable(arr: list[int], max_val: int | None = None) -> list[int]:
+    """Stable counting sort for non-negative integers in [0, max_val]."""
+    if not arr:
+        return []
+    if max_val is None:
+        max_val = max(arr)
+    count = [0] * (max_val + 1)
+    for x in arr:
+        count[x] += 1
+    # Prefix sum: count[i] = number of elements <= i (so last index for value i)
+    for i in range(1, max_val + 1):
+        count[i] += count[i - 1]
+    result = [0] * len(arr)
+    for i in range(len(arr) - 1, -1, -1):
+        val = arr[i]
+        pos = count[val] - 1
+        result[pos] = arr[i]
+        count[val] -= 1
+    return result
+
+# Example: stability matters when values have satellite data
+arr = [2, 1, 2, 0, 1]
+print(counting_sort_stable(arr))  # [0, 1, 1, 2, 2]  (order of 1s and 2s preserved)
+```
+
+### 3. Handling negative numbers (shift by min)
+
+Map values to `[0, max - min]` by subtracting `min`, sort with counting sort, then add `min` back.
+
+```python
+def counting_sort_with_negatives(arr: list[int]) -> list[int]:
+    """Counting sort for any integers (shift by min to get non-negative indices)."""
+    if not arr:
+        return []
+    lo, hi = min(arr), max(arr)
+    k = hi - lo + 1
+    count = [0] * k
+    for x in arr:
+        count[x - lo] += 1
+    result = []
+    for i in range(k):
+        val = lo + i
+        result.extend([val] * count[i])
+    return result
+
+# Example
+arr = [4, -1, 2, -1, 3, 0]
+print(counting_sort_with_negatives(arr))  # [-1, -1, 0, 2, 3, 4]
+```
+
+### 4. Sort by key (e.g. sort pairs by first element)
+
+When each element has a **key** and optional satellite data, build count by key, then prefix sum, then place by key in a stable way. Here we sort (key, value) pairs by key.
+
+```python
+def counting_sort_by_key(pairs: list[tuple[int, str]], max_key: int | None = None) -> list[tuple[int, str]]:
+    """Stable sort of (key, value) pairs by key. Keys non-negative in [0, max_key]."""
+    if not pairs:
+        return []
+    keys = [p[0] for p in pairs]
+    if max_key is None:
+        max_key = max(keys)
+    count = [0] * (max_key + 1)
+    for k in keys:
+        count[k] += 1
+    for i in range(1, max_key + 1):
+        count[i] += count[i - 1]
+    result = [None] * len(pairs)
+    for i in range(len(pairs) - 1, -1, -1):
+        k, v = pairs[i]
+        pos = count[k] - 1
+        result[pos] = (k, v)
+        count[k] -= 1
+    return result
+
+# Example
+pairs = [(2, "b"), (1, "a"), (2, "c"), (0, "d")]
+print(counting_sort_by_key(pairs))  # [(0, 'd'), (1, 'a'), (2, 'b'), (2, 'c')]
+```
+
+### 5. In-place style (overwrite original using count)
+
+You can write sorted values back into the original array if you use the stable variant and then copy from the output buffer, or rebuild in place from the count array (simple version below overwrites in order).
+
+```python
+def counting_sort_inplace(arr: list[int], max_val: int | None = None) -> None:
+    """Overwrite arr with sorted order. Non-negative integers only."""
+    if not arr:
+        return
+    if max_val is None:
+        max_val = max(arr)
+    count = [0] * (max_val + 1)
+    for x in arr:
+        count[x] += 1
+    i = 0
+    for val in range(max_val + 1):
+        for _ in range(count[val]):
+            arr[i] = val
+            i += 1
+
+# Example
+arr = [3, 1, 2, 3, 1]
+counting_sort_inplace(arr)
+print(arr)  # [1, 1, 2, 3, 3]
+```
+
+### 6. Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Range k** | Ensure `max_val` (or `max - min`) is known and not huge; otherwise counting sort can be worse than O(n log n) comparison sort. |
+| **Stability** | Use cumulative counts and iterate **backwards** over the input when placing; otherwise stability is lost. |
+| **Negative / any range** | Shift by `min` so indices are in `[0, k-1]`; add `min` back when building output. |
+| **Zero elements** | Handle empty array to avoid index errors. |
+| **Sorting objects** | Use key extraction (e.g. key = object.id) and stable counting sort by key; keep objects with their keys. |
+
+### Related sections and problems
+
+- Other sorts: [Sorting Algorithms](#sorting-algorithms) (comparison-based and counting sort mention).
+- Radix sort often uses counting sort as a stable subroutine for each digit.
+- Typical LeetCode problems: Sort an Array (when range is small), custom sort orders with integer keys (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
