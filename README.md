@@ -5834,16 +5834,202 @@ print(newton_1d(lambda x: x*x, lambda x: 2*x, lambda x: 2, 5.0))  # ~0
 
 ## Machine Learning and Data Analysis Algorithms
 
-Provides a structured view of algorithms underpinning supervised, unsupervised, and reinforcement learning. Summarizes model families (regression, SVMs, decision trees, neural networks) and the optimization routines used to train them, along with dimensionality reduction and clustering strategies.
+**Machine learning (ML)** algorithms learn patterns from data to predict or group. **Data analysis** covers summarization, visualization, and statistical inference. This section focuses on core algorithmic ideas: supervised (regression, classification), unsupervised (clustering, dimensionality reduction), and basic evaluation. Production ML typically uses libraries (e.g. scikit-learn, TensorFlow); here we illustrate the underlying steps.
 
-### Key Concepts
-- Supervised Learning
-- Unsupervised Learning
-- Feature Engineering
-- Model Evaluation
+### When to use
 
-### Related Problems
-*See [Solved Problems Index](#solved-problems-index) for implementations*
+| Task | Approach |
+|------|----------|
+| **Predict a number** | Regression: linear regression, gradient descent, regularized (Ridge/Lasso). |
+| **Predict a category** | Classification: logistic regression, k-NN, decision trees; neural networks for complex patterns. |
+| **Group similar points** | Clustering: k-means, hierarchical; no labels. |
+| **Reduce dimensions** | PCA, t-SNE; visualization or feature reduction. |
+| **Evaluate a model** | Train/test split, cross-validation; metrics: MSE, MAE, accuracy, precision, recall, F1. |
+
+### Paradigm overview
+
+| Type | Goal | Examples |
+|------|------|----------|
+| **Supervised** | Learn from (X, y); predict y for new X. | Linear/logistic regression, k-NN, trees, neural nets. |
+| **Unsupervised** | Find structure without labels. | K-means, hierarchical clustering, PCA. |
+| **Optimization** | Minimize loss (MSE, cross-entropy) over parameters. | Gradient descent, SGD; see [Optimization Techniques](#optimization-techniques). |
+
+### 1. Linear regression (gradient descent)
+
+Predict y = X·w + b; minimize mean squared error (MSE). Update weights by gradient of MSE.
+
+```python
+def linear_regression_gd(X: list[list[float]], y: list[float], lr: float = 0.01, epochs: int = 100) -> list[float]:
+    """X: n_samples x n_features; returns weights (including bias as last column of 1s)."""
+    n, d = len(X), len(X[0])
+    Xb = [row + [1.0] for row in X]
+    w = [0.0] * (d + 1)
+    for _ in range(epochs):
+        pred = [sum(Xb[i][j] * w[j] for j in range(d + 1)) for i in range(n)]
+        err = [pred[i] - y[i] for i in range(n)]
+        for j in range(d + 1):
+            w[j] -= lr * sum(Xb[i][j] * err[i] for i in range(n)) / n
+    return w
+
+# Example: y = 2*x + 1
+X = [[1], [2], [3]]
+y = [3, 5, 7]
+w = linear_regression_gd(X, y)
+print(w)  # [~2, ~1]
+```
+
+### 2. Logistic regression (binary classification)
+
+Model P(y=1|x) = σ(w·x + b) with sigmoid σ(z) = 1/(1+e^{-z}). Minimize binary cross-entropy; gradient descent on w.
+
+```python
+import math
+
+def sigmoid(z: float) -> float:
+    return 1 / (1 + math.exp(-z))
+
+def logistic_regression(X: list[list[float]], y: list[int], lr: float = 0.1, epochs: int = 500) -> list[float]:
+    """y in {0,1}; returns weights (bias last)."""
+    n, d = len(X), len(X[0])
+    Xb = [row + [1.0] for row in X]
+    w = [0.0] * (d + 1)
+    for _ in range(epochs):
+        for i in range(n):
+            pred = sigmoid(sum(Xb[i][j] * w[j] for j in range(d + 1)))
+            err = pred - y[i]
+            for j in range(d + 1):
+                w[j] -= lr * err * Xb[i][j] / n
+    return w
+
+# Example: separable points
+X = [[0], [1], [2], [3]]
+y = [0, 0, 1, 1]
+w = logistic_regression(X, y)
+print(sigmoid(w[0]*2 + w[1]))  # ~1
+```
+
+### 3. k-Nearest Neighbors (k-NN)
+
+Classify by majority vote among the k closest training points. No training; store data; at test time compute distances and vote.
+
+```python
+def euclidean(a: list[float], b: list[float]) -> float:
+    return sum((x - y)**2 for x, y in zip(a, b)) ** 0.5
+
+def knn_predict(X_train: list[list[float]], y_train: list[int], x: list[float], k: int = 3) -> int:
+    dists = [(euclidean(x, X_train[i]), y_train[i]) for i in range(len(X_train))]
+    dists.sort(key=lambda t: t[0])
+    votes = [dists[i][1] for i in range(min(k, len(dists)))]
+    return max(set(votes), key=votes.count)
+```
+
+### 4. K-means clustering
+
+Partition n points into k clusters: alternate (1) assign each point to nearest centroid, (2) set centroid = mean of assigned points.
+
+```python
+def kmeans(X: list[list[float]], k: int, max_iter: int = 100) -> list[int]:
+    """Returns cluster index per point (0..k-1)."""
+    n, d = len(X), len(X[0])
+    centroids = [X[i][:] for i in range(k)]
+    for _ in range(max_iter):
+        labels = []
+        for i in range(n):
+            best = min(range(k), key=lambda c: sum((X[i][j] - centroids[c][j])**2 for j in range(d)))
+            labels.append(best)
+        new_centroids = [[0.0] * d for _ in range(k)]
+        counts = [0] * k
+        for i in range(n):
+            c = labels[i]
+            for j in range(d):
+                new_centroids[c][j] += X[i][j]
+            counts[c] += 1
+        for c in range(k):
+            for j in range(d):
+                centroids[c][j] = new_centroids[c][j] / counts[c] if counts[c] else centroids[c][j]
+    return labels
+```
+
+### 5. Train/test split
+
+Split data randomly so the model is evaluated on unseen examples.
+
+```python
+import random
+
+def train_test_split(X: list, y: list, test_ratio: float = 0.2, seed: int | None = None) -> tuple:
+    if seed is not None:
+        random.seed(seed)
+    n = len(X)
+    idx = list(range(n))
+    random.shuffle(idx)
+    n_test = int(n * test_ratio)
+    test_idx, train_idx = idx[:n_test], idx[n_test:]
+    X_train = [X[i] for i in train_idx]
+    X_test = [X[i] for i in test_idx]
+    y_train = [y[i] for i in train_idx]
+    y_test = [y[i] for i in test_idx]
+    return X_train, X_test, y_train, y_test
+```
+
+### 6. Regression metrics: MSE and MAE
+
+Mean squared error and mean absolute error for regression models.
+
+```python
+def mse(y_true: list[float], y_pred: list[float]) -> float:
+    return sum((a - b)**2 for a, b in zip(y_true, y_pred)) / len(y_true)
+
+def mae(y_true: list[float], y_pred: list[float]) -> float:
+    return sum(abs(a - b) for a, b in zip(y_true, y_pred)) / len(y_true)
+```
+
+### 7. Classification metrics: accuracy, precision, recall
+
+For binary classification with classes 0 and 1 (positive = 1).
+
+```python
+def accuracy(y_true: list[int], y_pred: list[int]) -> float:
+    return sum(a == b for a, b in zip(y_true, y_pred)) / len(y_true)
+
+def precision_recall(y_true: list[int], y_pred: list[int]) -> tuple[float, float]:
+    tp = sum(1 for a, b in zip(y_true, y_pred) if a == 1 and b == 1)
+    fp = sum(1 for a, b in zip(y_true, y_pred) if a == 0 and b == 1)
+    fn = sum(1 for a, b in zip(y_true, y_pred) if a == 1 and b == 0)
+    prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    return prec, rec
+```
+
+### 8. Simple normalization (feature scaling)
+
+Scale features to zero mean and unit variance (z-score) to improve gradient descent and distance-based methods.
+
+```python
+def normalize(X: list[list[float]]) -> tuple[list[list[float]], list[float], list[float]]:
+    """Return (X_normalized, means, stds) for optional inverse transform."""
+    n, d = len(X), len(X[0])
+    means = [sum(X[i][j] for i in range(n)) / n for j in range(d)]
+    stds = [(sum((X[i][j] - means[j])**2 for i in range(n)) / n) ** 0.5 for j in range(d)]
+    Xn = [[(X[i][j] - means[j]) / (stds[j] or 1) for j in range(d)] for i in range(n)]
+    return Xn, means, stds
+```
+
+### Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Scale** | Normalize or standardize features for gradient descent and k-NN. |
+| **Overfitting** | Use train/test or cross-validation; regularize (Ridge, Lasso) or simplify the model. |
+| **Classification** | Imbalanced classes: use precision/recall/F1; consider class weights or sampling. |
+| **K-means** | Sensitive to initialization; run multiple times or use k-means++. |
+| **Production** | Use scikit-learn, TensorFlow/PyTorch for full pipelines and performance. |
+
+### Related sections and problems
+
+- Optimization: [Optimization Techniques](#optimization-techniques) (gradient descent, SGD).
+- Paradigms: [Algorithm Design Paradigms](#algorithm-design-paradigms); [Greedy Algorithms](#greedy-algorithms) (e.g. decision tree splitting).
+- For implementations and datasets: scikit-learn docs and [Solved Problems Index](#solved-problems-index) where applicable.
 
 ---
 
