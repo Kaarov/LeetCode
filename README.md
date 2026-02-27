@@ -5425,16 +5425,201 @@ Explores algorithms for spatial data: convex hulls, nearest neighbors, Voronoi d
 
 ## Probabilistic and Approximation Algorithms
 
-Discusses algorithms that leverage randomness or provide guaranteed approximations for intractable problems. Includes Monte Carlo and Las Vegas frameworks, randomized cuts, and approximation schemes for NP-hard tasks.
+This section covers **probabilistic (randomized)** algorithms, which use randomness in their execution, and **approximation algorithms**, which return solutions with **guaranteed quality** (e.g. within a factor of the optimum) for hard problems. Both are central when exact or deterministic solutions are too slow or do not exist (e.g. NP-hard problems).
 
-### Key Concepts
-- Monte Carlo Methods
-- Las Vegas Algorithms
-- Randomized Algorithms
-- Approximation Schemes
+### Probabilistic algorithms: main types
 
-### Related Problems
-*See [Solved Problems Index](#solved-problems-index) for implementations*
+| Type | Behavior | Example |
+|------|----------|---------|
+| **Monte Carlo** | May be wrong or approximate; running time usually fixed. | Randomized primality test; estimation by sampling. |
+| **Las Vegas** | Output is always correct; running time is random. | Randomized quicksort; random pivot. |
+| **Randomized** | Generic: use random choices to improve expected performance or simplify design. | Reservoir sampling; randomized selection. |
+
+### Approximation algorithms: key ideas
+
+- **Approximation ratio** ρ: algorithm returns a solution with value at most ρ · OPT (minimization) or at least OPT/ρ (maximization). ρ = 1 means exact.
+- **PTAS** (Polynomial-Time Approximation Scheme): for any ε > 0, (1+ε)-approximation in time polynomial in n (may be exponential in 1/ε).
+- **Constant-factor**: e.g. 2-approximation for vertex cover, log n–approximation for set cover (greedy).
+
+### When to use
+
+| Scenario | Consider |
+|----------|----------|
+| **Fast average case** | Randomized quicksort, random pivot selection. |
+| **Unbiased sampling** | Reservoir sampling, random permutation. |
+| **Estimation** | Monte Carlo: count/estimate by sampling. |
+| **NP-hard optimization** | Approximation: vertex cover, set cover, TSP (metric), scheduling. |
+| **Primality / testing** | Monte Carlo tests (e.g. Fermat, Miller–Rabin). |
+
+### 1. Randomized quicksort (Las Vegas)
+
+Pivot chosen uniformly at random; expected comparisons O(n log n); always correct.
+
+```python
+import random
+
+def quicksort_random(arr: list[int]) -> list[int]:
+    if len(arr) <= 1:
+        return arr[:]
+    pivot = random.choice(arr)
+    left = [x for x in arr if x < pivot]
+    mid = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    return quicksort_random(left) + mid + quicksort_random(right)
+```
+
+### 2. Reservoir sampling (single item)
+
+Choose one index so each index has probability 1/n. Accept the i-th item with probability 1/i.
+
+```python
+import random
+
+def reservoir_single(stream: list[int]) -> int:
+    """Return one uniformly random item from stream (unknown length)."""
+    for i, x in enumerate(stream):
+        if random.randint(0, i) == 0:
+            result = x
+    return result
+```
+
+### 3. Reservoir sampling (k items)
+
+Maintain a reservoir of size k; for item i (1-based), replace a random reservoir slot with probability k/i.
+
+```python
+def reservoir_k(stream: list[int], k: int) -> list[int]:
+    """Sample k items uniformly from stream; stream length >= k."""
+    reservoir = stream[:k][:]
+    for i in range(k, len(stream)):
+        j = random.randrange(0, i + 1)
+        if j < k:
+            reservoir[j] = stream[i]
+    return reservoir
+```
+
+### 4. Monte Carlo: estimate π by sampling
+
+Throw random points in [0,1]×[0,1]; fraction inside quarter circle ≈ π/4.
+
+```python
+import random
+
+def estimate_pi(n: int) -> float:
+    inside = 0
+    for _ in range(n):
+        x, y = random.random(), random.random()
+        if x * x + y * y <= 1:
+            inside += 1
+    return 4.0 * inside / n
+
+print(estimate_pi(100_000))  # ~3.14...
+```
+
+### 5. Monte Carlo: Fermat primality test
+
+If n is prime, a^(n-1) ≡ 1 (mod n) for 1 ≤ a < n. If not prime, many a fail. Repeat for random a; one round is a quick “composite” detector (with rare false primes for Carmichael numbers).
+
+```python
+def mod_pow(base: int, exp: int, mod: int) -> int:
+    result = 1
+    base %= mod
+    while exp:
+        if exp & 1:
+            result = (result * base) % mod
+        exp >>= 1
+        base = (base * base) % mod
+    return result
+
+def fermat_prime_test(n: int, rounds: int = 5) -> bool:
+    """Probably prime (false positives for Carmichael numbers)."""
+    if n < 4:
+        return n in (2, 3)
+    for _ in range(rounds):
+        a = random.randrange(2, n - 1)
+        if mod_pow(a, n - 1, n) != 1:
+            return False
+    return True
+```
+
+### 6. 2-approximation for vertex cover
+
+Repeatedly pick any edge (u, v), add both to the cover, remove all edges incident to u or v. Output size ≤ 2 · OPT.
+
+```python
+def vertex_cover_2approx(edges: list[tuple[int, int]], n: int) -> set[int]:
+    """Returns a vertex cover of size at most 2*OPT (undirected graph)."""
+    from collections import defaultdict
+    adj = defaultdict(set)
+    for u, v in edges:
+        adj[u].add(v)
+        adj[v].add(u)
+    cover = set()
+    for u, v in edges:
+        if u not in cover and v not in cover:
+            cover.add(u)
+            cover.add(v)
+    return cover
+```
+
+### 7. Greedy set cover (log n–approximation)
+
+Repeatedly choose the set that covers the most uncovered elements. Approximation ratio H(max set size) ≤ 1 + ln n.
+
+```python
+def set_cover_greedy(universe: set[int], sets: list[set[int]]) -> list[int]:
+    """Returns indices of sets that cover universe; O(ln n) approximation."""
+    uncovered = set(universe)
+    result = []
+    while uncovered:
+        best_i = None
+        best_new = 0
+        for i, s in enumerate(sets):
+            new = len(s & uncovered)
+            if new > best_new:
+                best_new = new
+                best_i = i
+        if best_i is None or best_new == 0:
+            break
+        result.append(best_i)
+        uncovered -= sets[best_i]
+    return result
+```
+
+### 8. Randomized selection (expected linear time)
+
+Like quicksort: random pivot, partition; recurse on left or right. Expected O(n).
+
+```python
+def quickselect(arr: list[int], k: int) -> int:
+    """k-th smallest (1-based). Expected O(n)."""
+    if not arr or k < 1 or k > len(arr):
+        raise ValueError("invalid k")
+    pivot = random.choice(arr)
+    left = [x for x in arr if x < pivot]
+    mid = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    if k <= len(left):
+        return quickselect(left, k)
+    if k <= len(left) + len(mid):
+        return pivot
+    return quickselect(right, k - len(left) - len(mid))
+```
+
+### Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Random seed** | Use `random.seed(...)` for reproducibility in tests. |
+| **Monte Carlo** | More rounds reduce error probability; quantify with Chernoff/Chebyshev when needed. |
+| **Fermat test** | Composite guarantee only; use Miller–Rabin or deterministic test for “prime” guarantee. |
+| **Approximation** | State the ratio (e.g. 2-approx); for minimization, output ≤ ρ·OPT. |
+
+### Related sections and problems
+
+- Exact optimization: [Dynamic Programming](#dynamic-programming), [Greedy Algorithms](#greedy-algorithms).
+- Paradigms: [Algorithm Design Paradigms](#algorithm-design-paradigms).
+- For deeper treatment: randomized algorithms (expandable hashing, skip lists), PTAS for scheduling or Euclidean TSP (see references).
 
 ---
 
