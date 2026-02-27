@@ -18,31 +18,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 7. [Queue Algorithms](#queue-algorithms)
 8. [Heap Algorithms](#heap-algorithms)
 9. [String Algorithms](#string-algorithms)
-10. [Sorting Algorithms](#sorting-algorithms)
-11. [Searching Algorithms](#searching-algorithms)
-12. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-13. [Array Algorithms](#array-algorithms)
-14. [Graph Algorithms](#graph-algorithms)
+10. [String Matching Algorithm](#string-matching-algorithm)
+11. [Sorting Algorithms](#sorting-algorithms)
+12. [Searching Algorithms](#searching-algorithms)
+13. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+14. [Array Algorithms](#array-algorithms)
+15. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-15. [Fundamental Data Structures](#fundamental-data-structures)
+16. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-16. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-17. [Optimization Techniques](#optimization-techniques)
-18. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-19. [Cryptographic Algorithms](#cryptographic-algorithms)
-20. [Data Compression Algorithms](#data-compression-algorithms)
-21. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-22. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-23. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-24. [Specialized Application Algorithms](#specialized-application-algorithms)
+17. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+18. [Optimization Techniques](#optimization-techniques)
+19. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+20. [Cryptographic Algorithms](#cryptographic-algorithms)
+21. [Data Compression Algorithms](#data-compression-algorithms)
+22. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+23. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+24. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+25. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-25. [Solved Problems Index](#solved-problems-index)
+26. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-26. [Further Reading and Study Resources](#further-reading-and-study-resources)
+27. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -1186,6 +1187,192 @@ print(is_palindrome_two_pointers("A man a plan a canal Panama"))  # True
 - Pattern matching (KMP, Rabin–Karp): [String Processing and Pattern Matching](#string-processing-and-pattern-matching).
 - Data structures: [Fundamental Data Structures](#fundamental-data-structures).
 - Typical LeetCode problems: Valid Palindrome, Valid Parentheses, Longest Substring Without Repeating Characters, Group Anagrams, First Unique Character, String Compression, Decode String (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## String Matching Algorithm
+
+**String matching** (substring search) is the problem of finding all (or the first) occurrences of a **pattern** string `P` in a **text** string `T`. We assume `n = len(T)` and `m = len(P)`.
+
+### Algorithm comparison
+
+| Algorithm      | Time (preprocessing) | Time (search) | Space | Notes |
+|----------------|----------------------|---------------|-------|--------|
+| Naive          | —                    | O(n × m)      | O(1)  | Simple; no skip. |
+| KMP            | O(m)                 | O(n + m)      | O(m)  | No backtrack in text. |
+| Rabin–Karp     | O(m)                 | O(n + m) avg  | O(1)* | Rolling hash; verify with compare. |
+| Python `in`/`str.find` | —              | Often O(n + m) | —    | Implementations vary (e.g. mix of ideas). |
+
+\* Excluding hash storage; rolling hash uses O(1) extra if implemented with a single value.
+
+### When to use which
+
+- **Naive**: Short patterns, one-off search, or when simplicity matters.
+- **KMP**: Need guaranteed linear time; avoid backtracking in text; good for repeated searches with same pattern.
+- **Rabin–Karp**: Multiple patterns of same length; plagiarism detection; rolling hash useful for “same substring” checks.
+
+### 1. Naive (brute force) matching
+
+Check every starting position in `T`; for each, compare `P` character by character. Worst case O(n × m) (e.g. `T = "aaa…a"`, `P = "aa…ab"`).
+
+```python
+def naive_search(text: str, pattern: str) -> list[int]:
+    """Return list of starting indices where pattern occurs in text."""
+    n, m = len(text), len(pattern)
+    if m == 0 or m > n:
+        return [] if m > n else list(range(n + 1))
+    indices = []
+    for i in range(n - m + 1):
+        if text[i:i + m] == pattern:
+            indices.append(i)
+    return indices
+
+# Examples
+print(naive_search("ABABDABACDABABCABAB", "ABABCABAB"))  # [10]
+print(naive_search("aaaa", "aa"))                        # [0, 1, 2]
+print(naive_search("abc", "d"))                          # []
+```
+
+### 2. KMP (Knuth–Morris–Pratt)
+
+KMP precomputes a **failure / LPS** (longest proper prefix that is also a suffix) array for `P`, then scans `T` once without backtracking. Time O(n + m), space O(m).
+
+**Idea**: After a mismatch at `T[i]` and `P[j]`, instead of moving `i` back, we move `j` to `lps[j-1]` (or 0) and keep `i` unchanged.
+
+```python
+def build_lps(pattern: str) -> list[int]:
+    """Build longest proper prefix which is also suffix for each prefix of pattern."""
+    m = len(pattern)
+    lps = [0] * m
+    length = 0  # length of current longest prefix-suffix
+    i = 1
+    while i < m:
+        if pattern[i] == pattern[length]:
+            length += 1
+            lps[i] = length
+            i += 1
+        else:
+            if length != 0:
+                length = lps[length - 1]
+            else:
+                lps[i] = 0
+                i += 1
+    return lps
+
+def kmp_search(text: str, pattern: str) -> list[int]:
+    """Return list of starting indices of pattern in text using KMP."""
+    n, m = len(text), len(pattern)
+    if m == 0 or m > n:
+        return [] if m > n else list(range(n + 1))
+
+    lps = build_lps(pattern)
+    indices = []
+    i = j = 0
+    while i < n:
+        if text[i] == pattern[j]:
+            i += 1
+            j += 1
+            if j == m:
+                indices.append(i - j)
+                j = lps[j - 1]
+        else:
+            if j != 0:
+                j = lps[j - 1]
+            else:
+                i += 1
+    return indices
+
+# Examples
+print(kmp_search("ABABDABACDABABCABAB", "ABABCABAB"))  # [10]
+print(kmp_search("aaaa", "aa"))                        # [0, 1, 2]
+print(kmp_search("abcabc", "abc"))                      # [0, 3]
+```
+
+### 3. Rabin–Karp (rolling hash)
+
+Compute a hash of `P` and a hash of each length-`m` window of `T`. If hashes match, verify with a direct compare to avoid false positives. With a good hash and modulus, average time O(n + m); worst case O(n × m) if many hash collisions.
+
+```python
+def rabin_karp_search(text: str, pattern: str, base: int = 256, mod: int = 10**9 + 7) -> list[int]:
+    """Return list of starting indices using Rabin–Karp rolling hash."""
+    n, m = len(text), len(pattern)
+    if m == 0 or m > n:
+        return [] if m > n else list(range(n + 1))
+
+    # Compute hash of pattern and of first window
+    def hash_str(s: str) -> int:
+        h = 0
+        for c in s:
+            h = (h * base + ord(c)) % mod
+        return h
+
+    pattern_hash = hash_str(pattern)
+    window_hash = hash_str(text[:m])
+    high = pow(base, m - 1, mod)  # base^(m-1) % mod
+
+    indices = []
+    for i in range(n - m + 1):
+        if pattern_hash == window_hash and text[i:i + m] == pattern:
+            indices.append(i)
+        if i < n - m:
+            # Roll: remove text[i], add text[i+m]
+            window_hash = (window_hash - ord(text[i]) * high) % mod
+            window_hash = (window_hash * base + ord(text[i + m])) % mod
+            window_hash = (window_hash + mod) % mod
+
+    return indices
+
+# Examples
+print(rabin_karp_search("GEEKS FOR GEEKS", "GEEK"))   # [0, 10]
+print(rabin_karp_search("abcabc", "abc"))             # [0, 3]
+```
+
+### 4. Check if pattern is substring (first occurrence only)
+
+For “does `P` occur in `T`?” or “first index of `P`”, you can use any of the above and take the first result, or use Python’s built-in.
+
+```python
+def contains_substring(text: str, pattern: str) -> bool:
+    return pattern in text  # Python uses an efficient algorithm internally
+
+def first_occurrence(text: str, pattern: str) -> int:
+    return text.find(pattern)  # -1 if not found
+
+# Or with KMP: return kmp_search(text, pattern)[0] if kmp_search(text, pattern) else -1
+```
+
+### 5. Repeated substring pattern (e.g. “abab” → True, “aba” → False)
+
+Check if `T` is built by repeating a proper substring. Concatenate `T + T`, remove first and last character, then check if `T` appears in the middle.
+
+```python
+def repeated_substring_pattern(s: str) -> bool:
+    """True if s = (substring) repeated 2+ times."""
+    if len(s) <= 1:
+        return False
+    doubled = (s + s)[1:-1]
+    return s in doubled
+
+# Examples
+print(repeated_substring_pattern("abab"))   # True  (ab repeated)
+print(repeated_substring_pattern("aba"))    # False
+print(repeated_substring_pattern("abcabc")) # True
+```
+
+### 6. Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **LPS / failure array** | Build from left to right; on mismatch, back up `length` to `lps[length-1]`, not to 0. |
+| **Rabin–Karp modulus** | Use a large prime to reduce collisions; always verify with `text[i:i+m] == pattern` when hashes match. |
+| **Overlapping matches** | Naive and Rabin–Karp naturally report overlapping occurrences; KMP can be adjusted (e.g. after a match set `j = lps[j-1]` to find next overlap). |
+| **Empty pattern** | Define behavior: often “match at every index” or return `[]`; document it. |
+
+### Related sections and problems
+
+- General string tricks: [String Algorithms](#string-algorithms).
+- More pattern matching (e.g. Aho–Corasick): [String Processing and Pattern Matching](#string-processing-and-pattern-matching).
+- Typical LeetCode problems: Implement strStr(), Repeated Substring Pattern, Find the Index of the First Occurrence (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
