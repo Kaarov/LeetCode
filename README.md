@@ -4109,168 +4109,253 @@ print(group_anagrams(["eat", "tea", "tan", "ate", "nat", "bat"]))
 
 ## Graph Algorithms
 
-Frames the critical problems on graphs—traversal, connectivity, shortest paths, minimum spanning trees, flows, and matchings. Presents the algorithmic toolkit necessary for reasoning about networks, scheduling, and numerous combinatorial optimization tasks.
+Graph algorithms address **traversal**, **connectivity**, **shortest paths**, **minimum spanning trees**, **topological order**, and **strongly connected components**. Graphs are typically represented as **adjacency lists** (list of neighbors per node) or **adjacency matrices**; for sparse graphs adjacency list is preferred.
 
-### Key Concepts
-- Graph Traversal (BFS, DFS)
-- Shortest Paths (Dijkstra, Bellman-Ford, Floyd-Warshall)
-- Minimum Spanning Trees (Kruskal, Prim)
-- Topological Sorting
-- Strongly Connected Components
+### Representations
 
-### Python Examples
+| Representation | Space | Edge lookup | Iterate neighbors |
+|----------------|--------|-------------|-------------------|
+| Adjacency list | O(V + E) | O(degree) | O(degree) |
+| Adjacency matrix | O(V²) | O(1) | O(V) |
 
-#### 1. Depth-First Search (DFS)
-```python
-def dfs(graph, start, visited=None):
-    """DFS traversal of graph."""
-    if visited is None:
-        visited = set()
-    
-    visited.add(start)
-    result = [start]
-    
-    for neighbor in graph.get(start, []):
-        if neighbor not in visited:
-            result.extend(dfs(graph, neighbor, visited))
-    
-    return result
+**Directed vs undirected:** For undirected, store each edge in both endpoints’ lists (or use a single list and treat as bidirectional).
 
-# Example: DFS on graph
-graph = {
-    0: [1, 2],
-    1: [2],
-    2: [0, 3],
-    3: [3]
-}
-print(dfs(graph, 2))  # [2, 0, 1, 3]
-```
+### When to use
 
-#### 2. Breadth-First Search (BFS)
-```python
-from collections import deque
+| Goal | Algorithm / technique |
+|------|------------------------|
+| Traversal, explore all nodes | [BFS](#bfs-algorithm), [DFS](#dfs-algorithm) |
+| Shortest path (unweighted) | BFS |
+| Shortest path (non-negative weights) | Dijkstra |
+| Shortest path (negative weights allowed) | Bellman-Ford |
+| All-pairs shortest paths | Floyd-Warshall |
+| Minimum spanning tree | Kruskal (Union-Find), Prim |
+| Dependency / schedule order | Topological sort (DFS or Kahn) |
+| Strongly connected components | Tarjan or Kosaraju (DFS) |
+| Connectivity / cycle in undirected | Union-Find, DFS |
 
-def bfs(graph, start):
-    """BFS traversal of graph."""
-    visited = set()
-    queue = deque([start])
-    result = []
-    
-    while queue:
-        node = queue.popleft()
-        if node not in visited:
-            visited.add(node)
-            result.append(node)
-            queue.extend(graph.get(node, []))
-    
-    return result
+### Complexity overview
 
-# Example: BFS on graph
-graph = {
-    0: [1, 2],
-    1: [2],
-    2: [0, 3],
-    3: [3]
-}
-print(bfs(graph, 2))  # [2, 0, 3, 1]
-```
+| Algorithm | Time | Space |
+|-----------|------|--------|
+| BFS / DFS | O(V + E) | O(V) |
+| Dijkstra (binary heap) | O((V + E) log V) | O(V) |
+| Bellman-Ford | O(V·E) | O(V) |
+| Floyd-Warshall | O(V³) | O(V²) |
+| Kruskal | O(E log E) | O(V) |
+| Prim (binary heap) | O(E log V) | O(V) |
+| Topological sort (DFS/Kahn) | O(V + E) | O(V) |
 
-#### 3. Dijkstra's Shortest Path
+### 1. Dijkstra's shortest path (non-negative weights)
+
+Single-source shortest paths using a min-heap. When a node is popped, its distance is finalized; relax each outgoing edge.
+
 ```python
 import heapq
 
-def dijkstra(graph, start):
-    """Dijkstra's algorithm for shortest paths."""
-    distances = {node: float('inf') for node in graph}
-    distances[start] = 0
+def dijkstra(graph: dict, start: int) -> dict[int, float]:
+    """graph: node -> list of (neighbor, weight). Returns dist from start to each node."""
+    dist = {node: float("inf") for node in graph}
+    dist[start] = 0
     pq = [(0, start)]
-    visited = set()
-    
     while pq:
-        dist, node = heapq.heappop(pq)
-        if node in visited:
+        d, u = heapq.heappop(pq)
+        if d > dist[u]:
             continue
-        visited.add(node)
-        
-        for neighbor, weight in graph.get(node, []):
-            new_dist = dist + weight
-            if new_dist < distances[neighbor]:
-                distances[neighbor] = new_dist
-                heapq.heappush(pq, (new_dist, neighbor))
-    
-    return distances
+        for v, w in graph.get(u, []):
+            if dist[u] + w < dist[v]:
+                dist[v] = dist[u] + w
+                heapq.heappush(pq, (dist[v], v))
+    return dist
 
-# Example: Shortest paths from node 0
-graph = {
-    0: [(1, 4), (2, 1)],
-    1: [(3, 1)],
-    2: [(1, 2), (3, 5)],
-    3: []
-}
+# Weighted directed graph: node -> [(neighbor, weight)]
+graph = {0: [(1, 4), (2, 1)], 1: [(3, 1)], 2: [(1, 2), (3, 5)], 3: []}
 print(dijkstra(graph, 0))  # {0: 0, 1: 3, 2: 1, 3: 4}
 ```
 
-#### 4. Topological Sort
-```python
-def topological_sort(graph):
-    """Topological sorting using DFS."""
-    visited = set()
-    result = []
-    
-    def dfs(node):
-        visited.add(node)
-        for neighbor in graph.get(node, []):
-            if neighbor not in visited:
-                dfs(neighbor)
-        result.append(node)
-    
-    for node in graph:
-        if node not in visited:
-            dfs(node)
-    
-    return result[::-1]
+### 2. Bellman-Ford (negative weights, negative cycle detection)
 
-# Example: Topological sort of DAG
-graph = {
-    5: [2, 0],
-    4: [0, 1],
-    2: [3],
-    3: [1],
-    1: [],
-    0: []
-}
-print(topological_sort(graph))  # [5, 4, 2, 3, 1, 0]
+Relax all edges V−1 times; one more pass to detect nodes reachable from a negative cycle.
+
+```python
+def bellman_ford(edges: list[tuple[int, int, float]], n: int, start: int) -> tuple[dict[int, float], bool]:
+    """edges: (u, v, w). Returns (dist, has_negative_cycle_reachable_from_start)."""
+    dist = {i: float("inf") for i in range(n)}
+    dist[start] = 0
+    for _ in range(n - 1):
+        for u, v, w in edges:
+            if dist[u] != float("inf") and dist[u] + w < dist[v]:
+                dist[v] = dist[u] + w
+    has_neg_cycle = False
+    for u, v, w in edges:
+        if dist[u] != float("inf") and dist[u] + w < dist[v]:
+            has_neg_cycle = True
+            break
+    return dist, has_neg_cycle
 ```
 
-#### 5. Union-Find (Disjoint Set)
+### 3. Floyd-Warshall (all-pairs shortest paths)
+
+Initialize with direct edges; for each middle node k, try improving i→j via k.
+
+```python
+def floyd_warshall(n: int, edges: list[tuple[int, int, float]]) -> list[list[float]]:
+    """edges: (u, v, w). Returns n×n dist matrix (inf = no path)."""
+    dist = [[float("inf")] * n for _ in range(n)]
+    for i in range(n):
+        dist[i][i] = 0
+    for u, v, w in edges:
+        dist[u][v] = min(dist[u][v], w)
+    for k in range(n):
+        for i in range(n):
+            for j in range(n):
+                if dist[i][k] + dist[k][j] < dist[i][j]:
+                    dist[i][j] = dist[i][k] + dist[k][j]
+    return dist
+```
+
+### 4. Kruskal's minimum spanning tree (Union-Find)
+
+Sort edges by weight; add each edge if it connects two different components (no cycle).
+
 ```python
 class UnionFind:
-    """Union-Find data structure for connectivity queries."""
-    def __init__(self, n):
+    def __init__(self, n: int) -> None:
         self.parent = list(range(n))
         self.rank = [0] * n
-    
-    def find(self, x):
+
+    def find(self, x: int) -> int:
         if self.parent[x] != x:
-            self.parent[x] = self.find(self.parent[x])  # Path compression
+            self.parent[x] = self.find(self.parent[x])
         return self.parent[x]
-    
-    def union(self, x, y):
-        root_x, root_y = self.find(x), self.find(y)
-        if root_x == root_y:
+
+    def union(self, x: int, y: int) -> bool:
+        rx, ry = self.find(x), self.find(y)
+        if rx == ry:
             return False
-        
-        # Union by rank
-        if self.rank[root_x] < self.rank[root_y]:
-            self.parent[root_x] = root_y
-        elif self.rank[root_x] > self.rank[root_y]:
-            self.parent[root_y] = root_x
-        else:
-            self.parent[root_y] = root_x
-            self.rank[root_x] += 1
+        if self.rank[rx] < self.rank[ry]:
+            rx, ry = ry, rx
+        self.parent[ry] = rx
+        if self.rank[rx] == self.rank[ry]:
+            self.rank[rx] += 1
         return True
 
-# Example: Union-Find operations
+def kruskal(n: int, edges: list[tuple[int, int, float]]) -> list[tuple[int, int, float]]:
+    """edges: (u, v, weight). Returns MST edge list."""
+    edges = sorted(edges, key=lambda e: e[2])
+    uf = UnionFind(n)
+    mst: list[tuple[int, int, float]] = []
+    for u, v, w in edges:
+        if uf.union(u, v):
+            mst.append((u, v, w))
+    return mst
+```
+
+### 5. Prim's minimum spanning tree (priority queue)
+
+Start from a vertex; repeatedly add the lightest edge from the current cut (tree vs rest). Similar to Dijkstra but key = edge weight, not path length.
+
+```python
+def prim(n: int, adj: dict[int, list[tuple[int, float]]]) -> list[tuple[int, int, float]]:
+    """adj: node -> [(neighbor, weight)]. Returns MST edges (u, v, w)."""
+    if not adj:
+        return []
+    start = next(iter(adj))
+    in_mst = {start}
+    pq: list[tuple[float, int, int]] = []  # (w, u, v) where v not in mst
+    for v, w in adj.get(start, []):
+        heapq.heappush(pq, (w, start, v))
+    mst: list[tuple[int, int, float]] = []
+    while pq and len(in_mst) < n:
+        w, u, v = heapq.heappop(pq)
+        if v in in_mst:
+            continue
+        in_mst.add(v)
+        mst.append((u, v, w))
+        for nxt, nw in adj.get(v, []):
+            if nxt not in in_mst:
+                heapq.heappush(pq, (nw, v, nxt))
+    return mst
+```
+
+### 6. Topological sort (DFS post-order)
+
+Valid only on DAGs. Run DFS; append node to result when finishing; reverse for topological order.
+
+```python
+def topological_sort_dfs(graph: dict[int, list[int]]) -> list[int]:
+    visited = set()
+    result: list[int] = []
+
+    def dfs(u: int) -> None:
+        visited.add(u)
+        for v in graph.get(u, []):
+            if v not in visited:
+                dfs(v)
+        result.append(u)
+
+    for u in graph:
+        if u not in visited:
+            dfs(u)
+    result.reverse()
+    return result
+
+graph = {5: [2, 0], 4: [0, 1], 2: [3], 3: [1], 1: [], 0: []}
+print(topological_sort_dfs(graph))  # e.g. [5, 4, 2, 3, 1, 0]
+```
+
+### 7. Topological sort (Kahn's algorithm, in-degree)
+
+Process nodes with in-degree 0; remove them and update in-degrees of neighbors.
+
+```python
+from collections import deque
+
+def topological_sort_kahn(graph: dict[int, list[int]]) -> list[int]:
+    """Returns topological order, or empty if cycle."""
+    in_deg = {u: 0 for u in graph}
+    for u in graph:
+        for v in graph[u]:
+            in_deg[v] = in_deg.get(v, 0) + 1
+    q = deque([u for u in graph if in_deg[u] == 0])
+    order = []
+    while q:
+        u = q.popleft()
+        order.append(u)
+        for v in graph.get(u, []):
+            in_deg[v] -= 1
+            if in_deg[v] == 0:
+                q.append(v)
+    return order if len(order) == len(graph) else []
+```
+
+### 8. Union-Find (disjoint set) for connectivity
+
+Path compression and union by rank give near-constant time per operation.
+
+```python
+class UnionFind:
+    def __init__(self, n: int) -> None:
+        self.parent = list(range(n))
+        self.rank = [0] * n
+
+    def find(self, x: int) -> int:
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])
+        return self.parent[x]
+
+    def union(self, x: int, y: int) -> bool:
+        rx, ry = self.find(x), self.find(y)
+        if rx == ry:
+            return False
+        if self.rank[rx] < self.rank[ry]:
+            rx, ry = ry, rx
+        self.parent[ry] = rx
+        if self.rank[rx] == self.rank[ry]:
+            self.rank[rx] += 1
+        return True
+
+# Example: count components after adding edges
 uf = UnionFind(5)
 uf.union(0, 1)
 uf.union(2, 3)
@@ -4278,8 +4363,74 @@ print(uf.find(0) == uf.find(1))  # True
 print(uf.find(0) == uf.find(2))  # False
 ```
 
-### Related Problems
-*See [Solved Problems Index](#solved-problems-index) for implementations*
+### 9. Cycle detection in undirected graph (DFS)
+
+If you see an edge to an already-visited node that is not the parent, there is a cycle.
+
+```python
+def has_cycle_undirected(graph: dict[int, list[int]]) -> bool:
+    visited = set()
+
+    def dfs(u: int, parent: int | None) -> bool:
+        visited.add(u)
+        for v in graph.get(u, []):
+            if v not in visited:
+                if dfs(v, u):
+                    return True
+            elif v != parent:
+                return True
+        return False
+
+    for u in graph:
+        if u not in visited and dfs(u, None):
+            return True
+    return False
+```
+
+### 10. Number of connected components (undirected)
+
+Run DFS or BFS from each unvisited node; count starts.
+
+```python
+def count_components(n: int, edges: list[tuple[int, int]]) -> int:
+    """n nodes, edges as (u, v). Returns number of connected components."""
+    adj: dict[int, list[int]] = {i: [] for i in range(n)}
+    for u, v in edges:
+        adj[u].append(v)
+        adj[v].append(u)
+    visited = set()
+
+    def dfs(u: int) -> None:
+        visited.add(u)
+        for v in adj[u]:
+            if v not in visited:
+                dfs(v)
+
+    count = 0
+    for i in range(n):
+        if i not in visited:
+            count += 1
+            dfs(i)
+    return count
+```
+
+### Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Dijkstra** | Only for non-negative weights; use a heap and skip stale entries (d > dist[u]). |
+| **Bellman-Ford** | Use for negative weights or to detect negative cycles; relax V−1 times. |
+| **Floyd-Warshall** | O(V³); use when you need all-pairs or when V is small. |
+| **Kruskal vs Prim** | Kruskal: sort edges, Union-Find. Prim: like Dijkstra with edge weight as key. |
+| **Topological sort** | Graph must be a DAG; Kahn gives order and detects cycle (order length < V). |
+| **Directed cycle** | Use DFS with three states (see [DFS Algorithm](#dfs-algorithm)). |
+
+### Related sections and problems
+
+- Traversal: [DFS Algorithm](#dfs-algorithm), [BFS Algorithm](#bfs-algorithm).
+- Trees: [Tree Algorithm](#tree-algorithm), [Binary Tree Algorithm](#binary-tree-algorithm).
+- Data structures: [Fundamental Data Structures](#fundamental-data-structures).
+- LeetCode-style problems: Number of Connected Components, Course Schedule, Network Delay Time, Cheapest Flights Within K Stops, Min Cost to Connect All Points, Critical Connections (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
