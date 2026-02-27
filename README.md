@@ -5649,16 +5649,186 @@ print(euler(lambda t, y: y, 0, 1, 0.1, 10)[-1])  # (1.0, ~2.59)
 
 ## Optimization Techniques
 
-Covers discrete and continuous optimization, from linear programming (simplex, interior-point) to gradient-based methods and metaheuristics. Discusses constraint handling, convergence properties, and practical considerations for large-scale or non-convex problems.
+**Optimization techniques** find inputs that minimize (or maximize) an objective function, possibly subject to constraints. They range from **continuous** (gradient descent, Newton) to **discrete/combinatorial** (integer programming, metaheuristics) and from **convex** (guaranteed global optimum) to **non-convex** (local minima, heuristics).
 
-### Key Concepts
-- Linear Programming
-- Gradient Descent
-- Simulated Annealing
-- Genetic Algorithms
+### When to use
 
-### Related Problems
-*See [Solved Problems Index](#solved-problems-index) for implementations*
+| Setting | Methods |
+|--------|---------|
+| **Smooth unconstrained** | Gradient descent, Newton; choose step size or use line search. |
+| **Convex with constraints** | Projected gradient, interior-point; linear programming (LP) for linear objective and constraints. |
+| **Non-convex / discrete** | Simulated annealing, genetic algorithms, tabu search; no global guarantee. |
+| **Large-scale / ML** | Stochastic gradient descent (SGD), mini-batch; adaptive (Adam, etc.) in practice. |
+
+### Paradigm overview
+
+| Technique | Idea | Typical use |
+|-----------|------|-------------|
+| **Gradient descent** | Move opposite to gradient; step size α. | Smooth objectives; convex → global min. |
+| **Stochastic GD** | Use one (or a batch of) sample to estimate gradient; reduces cost per step. | Training ML models. |
+| **Simulated annealing** | Accept worse moves with probability decreasing with “temperature”; escape local minima. | Combinatorial, non-convex. |
+| **Genetic algorithm** | Population of solutions; selection, crossover, mutation; evolve toward better fitness. | Heuristic search, no gradient. |
+| **Linear programming** | Minimize cᵀx subject to Ax ≤ b, x ≥ 0; simplex or interior-point. | Resource allocation, scheduling. |
+
+### 1. Gradient descent (univariate)
+
+Minimize f(x) by iterating x := x − α·f'(x). α is the learning rate.
+
+```python
+def gradient_descent_1d(f, df, x0: float, alpha: float = 0.1, tol: float = 1e-9, max_iter: int = 1000) -> float:
+    x = x0
+    for _ in range(max_iter):
+        g = df(x)
+        if abs(g) < tol:
+            break
+        x = x - alpha * g
+    return x
+
+# Example: minimize x^2, derivative 2*x
+print(gradient_descent_1d(lambda x: x*x, lambda x: 2*x, 5.0))  # ~0
+```
+
+### 2. Gradient descent (multivariate)
+
+Update all coordinates: x := x − α·∇f(x). ∇f is the vector of partial derivatives.
+
+```python
+def gradient_descent(f, grad, x0: list[float], alpha: float = 0.1, tol: float = 1e-9, max_iter: int = 1000) -> list[float]:
+    x = x0[:]
+    for _ in range(max_iter):
+        g = grad(x)
+        if sum(gi*gi for gi in g) ** 0.5 < tol:
+            break
+        for i in range(len(x)):
+            x[i] -= alpha * g[i]
+    return x
+
+# Example: minimize x^2 + y^2, gradient (2x, 2y)
+print(gradient_descent(
+    lambda x: x[0]**2 + x[1]**2,
+    lambda x: [2*x[0], 2*x[1]],
+    [3.0, 4.0]
+))  # [~0, ~0]
+```
+
+### 3. Stochastic gradient descent (SGD) sketch
+
+Use a single sample (or minibatch) to estimate the gradient; update with that estimate. Reduces per-iteration cost; noisy updates can help escape shallow local minima.
+
+```python
+def sgd_step(x: list[float], grad_sample: list[float], alpha: float) -> None:
+    """In-place update: x -= alpha * grad_sample."""
+    for i in range(len(x)):
+        x[i] -= alpha * grad_sample[i]
+
+# Typical loop: for each batch, compute gradient on batch, then sgd_step(x, grad_batch, lr)
+```
+
+### 4. Simulated annealing (minimize f over discrete/continuous space)
+
+Start at high “temperature” T; propose random moves; accept if better, or with probability exp(−Δ/T) if worse. Decrease T over time (cooling schedule).
+
+```python
+import random
+import math
+
+def simulated_annealing(f, x0: float, bounds: tuple[float, float], T0: float = 100, cooling: float = 0.995, max_iter: int = 5000) -> float:
+    """Minimize f(x) in bounds[0] <= x <= bounds[1]."""
+    x, best_x = x0, x0
+    best_f = f(best_x)
+    T = T0
+    for _ in range(max_iter):
+        delta = random.uniform(-1, 1) * (bounds[1] - bounds[0]) * 0.1
+        x_new = max(bounds[0], min(bounds[1], x + delta))
+        d = f(x_new) - f(x)
+        if d < 0 or random.random() < math.exp(-d / T):
+            x = x_new
+            if f(x) < best_f:
+                best_f, best_x = f(x), x
+        T *= cooling
+    return best_x
+
+# Example: minimize (x-2)^2
+print(simulated_annealing(lambda x: (x-2)**2, 0, (0, 5)))  # ~2
+```
+
+### 5. Genetic algorithm (simple maximization)
+
+Population of individuals (e.g. bitstrings); fitness function; select, crossover, mutate; repeat for several generations.
+
+```python
+import random
+
+def genetic_algorithm(fitness, n_bits: int, pop_size: int = 50, generations: int = 100) -> list[int]:
+    """Maximize fitness(individual) where individual is list of 0/1 of length n_bits."""
+    pop = [[random.randint(0, 1) for _ in range(n_bits)] for _ in range(pop_size)]
+    for _ in range(generations):
+        pop.sort(key=fitness, reverse=True)
+        new_pop = pop[:pop_size//2][:]
+        while len(new_pop) < pop_size:
+            p1, p2 = random.choice(pop[:pop_size//2]), random.choice(pop[:pop_size//2])
+            point = random.randint(1, n_bits - 1)
+            child = p1[:point] + p2[point:]
+            for i in range(n_bits):
+                if random.random() < 0.05:
+                    child[i] = 1 - child[i]
+            new_pop.append(child)
+        pop = new_pop
+    return max(pop, key=fitness)
+
+# Example: maximize number of 1s
+print(genetic_algorithm(lambda x: sum(x), 20)[:5])  # [1,1,1,...]
+```
+
+### 6. Line search (backtracking)
+
+Reduce step size α until f(x − α·g) decreases sufficiently (Armijo condition). Improves robustness of gradient descent.
+
+```python
+def backtracking_line_search(f, x: list[float], g: list[float], alpha: float = 1.0, c: float = 0.5, rho: float = 0.9) -> float:
+    """Find step size alpha so f(x - alpha*g) <= f(x) + c*alpha*(g·g)."""
+    f0 = f(x)
+    dot = sum(g[i]*g[i] for i in range(len(g)))
+    while f([x[i] - alpha * g[i] for i in range(len(x))]) > f0 - c * alpha * dot:
+        alpha *= rho
+    return alpha
+```
+
+### 7. Newton’s method (optimization)
+
+For minimizing f, use second derivative: x := x − f'(x)/f''(x). Converges fast near a minimum; requires Hessian (or approximation) in higher dimensions.
+
+```python
+def newton_1d(f, df, d2f, x0: float, tol: float = 1e-9, max_iter: int = 50) -> float:
+    x = x0
+    for _ in range(max_iter):
+        g, h = df(x), d2f(x)
+        if abs(g) < tol:
+            break
+        if abs(h) < 1e-14:
+            break
+        x = x - g / h
+    return x
+
+# Minimize x^2: df=2x, d2f=2
+print(newton_1d(lambda x: x*x, lambda x: 2*x, lambda x: 2, 5.0))  # ~0
+```
+
+### Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Learning rate** | Too large → divergence; too small → slow. Use line search or adaptive (e.g. Adam) in practice. |
+| **Convergence** | Stop when ‖∇f‖ < tol or change in x or f is small; set max iterations. |
+| **Simulated annealing** | Cooling schedule and neighborhood size affect quality; tune for the problem. |
+| **Genetic** | Population size, mutation rate, and crossover design matter; problem-dependent. |
+| **LP** | For linear objectives and constraints use scipy.optimize.linprog or dedicated solvers. |
+
+### Related sections and problems
+
+- Numerical methods: [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms).
+- When objective is linear/greedy: [Greedy Algorithms](#greedy-algorithms); when structure is DP: [Dynamic Programming](#dynamic-programming).
+- ML training: [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms).
 
 ---
 
