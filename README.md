@@ -20,31 +20,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 9. [String Algorithms](#string-algorithms)
 10. [String Matching Algorithm](#string-matching-algorithm)
 11. [Linked List Algorithm](#linked-list-algorithm)
-12. [Sorting Algorithms](#sorting-algorithms)
-13. [Searching Algorithms](#searching-algorithms)
-14. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-15. [Array Algorithms](#array-algorithms)
-16. [Graph Algorithms](#graph-algorithms)
+12. [Hash Algorithm](#hash-algorithm)
+13. [Sorting Algorithms](#sorting-algorithms)
+14. [Searching Algorithms](#searching-algorithms)
+15. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+16. [Array Algorithms](#array-algorithms)
+17. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-17. [Fundamental Data Structures](#fundamental-data-structures)
+18. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-18. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-19. [Optimization Techniques](#optimization-techniques)
-20. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-21. [Cryptographic Algorithms](#cryptographic-algorithms)
-22. [Data Compression Algorithms](#data-compression-algorithms)
-23. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-24. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-25. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-26. [Specialized Application Algorithms](#specialized-application-algorithms)
+19. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+20. [Optimization Techniques](#optimization-techniques)
+21. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+22. [Cryptographic Algorithms](#cryptographic-algorithms)
+23. [Data Compression Algorithms](#data-compression-algorithms)
+24. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+25. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+26. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+27. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-27. [Solved Problems Index](#solved-problems-index)
+28. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-28. [Further Reading and Study Resources](#further-reading-and-study-resources)
+29. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -1616,6 +1617,205 @@ def delete_all_with_value(head: ListNode | None, val: int) -> ListNode | None:
 
 - Data structure details: [Fundamental Data Structures](#fundamental-data-structures) (Linked List subsection).
 - Typical LeetCode problems: Reverse Linked List, Merge Two Sorted Lists, Linked List Cycle, Remove Nth Node From End of List, Reorder List, Add Two Numbers (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## Hash Algorithm
+
+**Hash tables** (dictionaries, maps) store key–value pairs. A **hash function** maps keys to bucket indices; **collisions** (two keys to the same bucket) are handled by chaining (list per bucket) or open addressing. In Python, `dict` and `defaultdict` are hash-based; `Counter` is a dict subclass for counting. Average-time **O(1)** insert, delete, and lookup; worst case O(n) if many collisions.
+
+### Operations and complexity (typical)
+
+| Operation | Average | Worst | Notes |
+|-----------|--------|--------|--------|
+| Insert / set | O(1) | O(n) | Rehash can occur. |
+| Lookup / get | O(1) | O(n) | |
+| Delete | O(1) | O(n) | |
+| Iterate keys/values | O(n) | O(n) | n = number of entries. |
+
+### When to use
+
+- **Two Sum / complement**: store “value → index” or “value → count”; check for `target - x` in the map.
+- **Counting / frequency**: `Counter(iterable)` or `defaultdict(int)`.
+- **Grouping**: key = derived value (e.g. sorted tuple for anagrams); value = list of items.
+- **Deduplication / seen set**: track visited nodes, indices, or states.
+- **Prefix/suffix or subarray**: store prefix sums or state and look up “complement” (e.g. subarray sum equals K).
+- **Caching / memoization**: key = arguments, value = result.
+
+### 1. Two Sum (complement in hash map)
+
+```python
+def two_sum(nums: list[int], target: int) -> list[int]:
+    """Return indices of two numbers that add up to target. Exactly one solution assumed."""
+    seen: dict[int, int] = {}  # value -> index
+    for i, x in enumerate(nums):
+        comp = target - x
+        if comp in seen:
+            return [seen[comp], i]
+        seen[x] = i
+    return []
+
+# Example
+print(two_sum([2, 7, 11, 15], 9))   # [0, 1]
+print(two_sum([3, 2, 4], 6))       # [1, 2]
+```
+
+### 2. Frequency count with Counter
+
+```python
+from collections import Counter
+
+def frequency_count(items: list) -> dict:
+    return dict(Counter(items))
+
+# Example
+nums = [1, 2, 2, 3, 2, 1, 3]
+print(frequency_count(nums))  # {1: 2, 2: 3, 3: 2}
+
+# Most common
+words = ["a", "b", "a", "c", "a", "b"]
+print(Counter(words).most_common(2))  # [('a', 3), ('b', 2)]
+```
+
+### 3. Group by key (e.g. anagrams)
+
+```python
+from collections import defaultdict
+
+def group_anagrams(strs: list[str]) -> list[list[str]]:
+    groups: dict[tuple, list[str]] = defaultdict(list)
+    for s in strs:
+        key = tuple(sorted(s))
+        groups[key].append(s)
+    return list(groups.values())
+
+# Example
+print(group_anagrams(["eat", "tea", "tan", "ate", "nat", "bat"]))
+# [['eat', 'tea', 'ate'], ['tan', 'nat'], ['bat']]
+```
+
+### 4. Subarray sum equals K (prefix sum + hash)
+
+```python
+def subarray_sum_k(nums: list[int], k: int) -> int:
+    """Count of contiguous subarrays with sum equal to k."""
+    prefix = 0
+    count = 0
+    seen: dict[int, int] = {0: 1}  # prefix_sum -> frequency
+    for x in nums:
+        prefix += x
+        count += seen.get(prefix - k, 0)
+        seen[prefix] = seen.get(prefix, 0) + 1
+    return count
+
+# Example
+print(subarray_sum_k([1, 1, 1], 2))     # 2
+print(subarray_sum_k([1, 2, 3], 3))     # 2  ([1,2] and [3])
+```
+
+### 5. First non-repeating character (count then scan)
+
+```python
+from collections import Counter
+
+def first_uniq_char(s: str) -> int:
+    freq = Counter(s)
+    for i, c in enumerate(s):
+        if freq[c] == 1:
+            return i
+    return -1
+
+# Example
+print(first_uniq_char("leetcode"))  # 0
+print(first_uniq_char("aabb"))      # -1
+```
+
+### 6. Deduplication / seen set
+
+```python
+def remove_duplicates_preserve_order(items: list) -> list:
+    seen: set = set()
+    out = []
+    for x in items:
+        if x not in seen:
+            seen.add(x)
+            out.append(x)
+    return out
+
+# Example
+print(remove_duplicates_preserve_order([1, 2, 2, 3, 1, 4]))  # [1, 2, 3, 4]
+```
+
+### 7. Two arrays: intersection or difference
+
+```python
+def intersection(nums1: list[int], nums2: list[int]) -> list[int]:
+    """Distinct elements that appear in both."""
+    set1 = set(nums1)
+    return list(set(x for x in nums2 if x in set1))
+
+def find_difference(arr1: list[int], arr2: list[int]) -> list[list[int]]:
+    """Elements in arr1 but not arr2, and in arr2 but not arr1."""
+    s1, s2 = set(arr1), set(arr2)
+    return [list(s1 - s2), list(s2 - s1)]
+
+# Example
+print(intersection([1, 2, 2, 1], [2, 2]))           # [2]
+print(find_difference([1, 2, 3], [2, 4, 6]))        # [[1, 3], [4, 6]]
+```
+
+### 8. Caching / memoization (hash as cache)
+
+```python
+from functools import lru_cache
+
+@lru_cache(maxsize=None)
+def fib(n: int) -> int:
+    if n <= 1:
+        return n
+    return fib(n - 1) + fib(n - 2)
+
+# Or manual cache
+def fib_manual(n: int, cache: dict[int, int] | None = None) -> int:
+    cache = cache or {}
+    if n <= 1:
+        return n
+    if n not in cache:
+        cache[n] = fib_manual(n - 1, cache) + fib_manual(n - 2, cache)
+    return cache[n]
+```
+
+### 9. defaultdict for accumulators
+
+```python
+from collections import defaultdict
+
+def group_by_key(pairs: list[tuple[str, int]]) -> dict[str, list[int]]:
+    """Group values by key: [(a,1), (b,2), (a,3)] -> {a: [1,3], b: [2]}."""
+    d: dict[str, list[int]] = defaultdict(list)
+    for k, v in pairs:
+        d[k].append(v)
+    return dict(d)
+
+# Example
+print(group_by_key([("a", 1), ("b", 2), ("a", 3)]))  # {'a': [1, 3], 'b': [2]}
+```
+
+### 10. Implementation notes and patterns
+
+| Pattern | Idea |
+|--------|------|
+| **Complement / Two Sum** | Store “value → index” (or count); for each `x`, check `target - x` in map. |
+| **Prefix sum + hash** | Store prefix sums; for each prefix `p`, count how many earlier prefixes = `p - k`. |
+| **Group by key** | Key = normalized form (e.g. sorted tuple); value = list of items. |
+| **Seen set** | Before processing, check `if x in seen`; then `seen.add(x)`. |
+| **Counter** | `Counter(iterable)` for frequency; `most_common(k)` for top k. |
+| **defaultdict** | Use when “missing key” should default to 0, [], etc., to avoid key checks. |
+
+### Related sections and problems
+
+- Data structure details: [Fundamental Data Structures](#fundamental-data-structures) (Hash Table subsection).
+- Typical LeetCode problems: Two Sum, Subarray Sum Equals K, Group Anagrams, First Unique Character, Intersection of Two Arrays, LRU Cache (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
