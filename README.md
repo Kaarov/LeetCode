@@ -15,31 +15,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 ### Part II: Core Algorithms
 5. [Binary Search Algorithm](#binary-search-algorithm)
 6. [Stack Algorithms](#stack-algorithms)
-7. [Sorting Algorithms](#sorting-algorithms)
-8. [Searching Algorithms](#searching-algorithms)
-9. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-10. [Array Algorithms](#array-algorithms)
-11. [Graph Algorithms](#graph-algorithms)
+7. [Queue Algorithms](#queue-algorithms)
+8. [Sorting Algorithms](#sorting-algorithms)
+9. [Searching Algorithms](#searching-algorithms)
+10. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+11. [Array Algorithms](#array-algorithms)
+12. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-12. [Fundamental Data Structures](#fundamental-data-structures)
+13. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-13. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-14. [Optimization Techniques](#optimization-techniques)
-15. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-16. [Cryptographic Algorithms](#cryptographic-algorithms)
-17. [Data Compression Algorithms](#data-compression-algorithms)
-18. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-19. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-20. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-21. [Specialized Application Algorithms](#specialized-application-algorithms)
+14. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+15. [Optimization Techniques](#optimization-techniques)
+16. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+17. [Cryptographic Algorithms](#cryptographic-algorithms)
+18. [Data Compression Algorithms](#data-compression-algorithms)
+19. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+20. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+21. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+22. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-22. [Solved Problems Index](#solved-problems-index)
+23. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-23. [Further Reading and Study Resources](#further-reading-and-study-resources)
+24. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -489,6 +490,236 @@ print(decode_string(\"2[abc]3[cd]ef\")) # \"abcabccdcdcdef\"
 ### 7. Implementation notes and patterns
 
 | Pattern / Use case              | Idea                                                                 |\n|---------------------------------|----------------------------------------------------------------------|\n| Parentheses / bracket matching  | Push opening, pop when matching closing; invalid if mismatch/stack left. |\n| Expression evaluation (RPN)     | Push numbers, on operator pop 2 operands, compute, push result.     |\n| Monotonic stack                 | Maintain increasing/decreasing order to answer range queries in O(n). |\n| Iterative DFS                   | Use stack instead of recursion to explore graph or tree.            |\n| Undo operations                 | Push previous states onto stack; `undo` pops last state.            |\n\n### Related sections and problems\n\n- Data structure details: [Fundamental Data Structures](#fundamental-data-structures) (Stack subsection).\n- Typical LeetCode problems: Valid Parentheses, Evaluate Reverse Polish Notation, Daily Temperatures, Next Greater Element, Decode String (see [Solved Problems Index](#solved-problems-index)).\n*** End Patch```} ***!
+
+---
+
+## Queue Algorithms
+
+**Queues** are FIFO (first-in, first-out) structures. Elements are inserted at the **back** (enqueue) and removed from the **front** (dequeue). Queues are ideal for **breadth-first traversal**, **task scheduling**, and **buffering** data streams.
+
+In Python, `collections.deque` is the preferred implementation for O(1) appends/pops at both ends.
+
+### Operations and complexity
+
+- `enqueue` (push to back): **O(1)**
+- `dequeue` (pop from front): **O(1)**
+- `peek_front`, `peek_back`, `is_empty`: **O(1)**
+- Space: **O(n)** for n elements
+
+### 1. Basic queue implementation (using deque)
+
+```python
+from collections import deque
+
+
+class Queue:
+    def __init__(self):
+        self._q = deque()
+
+    def enqueue(self, item):
+        self._q.append(item)
+
+    def dequeue(self):
+        if self.is_empty():
+            raise IndexError("dequeue from empty queue")
+        return self._q.popleft()
+
+    def peek(self):
+        if self.is_empty():
+            return None
+        return self._q[0]
+
+    def is_empty(self):
+        return len(self._q) == 0
+
+    def __len__(self):
+        return len(self._q)
+
+
+# Example usage
+q = Queue()
+for x in [1, 2, 3]:
+    q.enqueue(x)
+
+print(q.dequeue())  # 1
+print(q.peek())     # 2
+print(len(q))       # 2
+```
+
+### 2. BFS (Breadth-First Search) on a graph
+
+Breadth-first search uses a queue to explore nodes level by level.
+
+```python
+from collections import deque
+
+
+def bfs_graph(graph: dict[int, list[int]], start: int) -> list[int]:
+    """
+    BFS traversal of an unweighted graph represented as adjacency list.
+    Returns nodes in the order they are visited.
+    """
+    visited = set([start])
+    order: list[int] = []
+    q: deque[int] = deque([start])
+
+    while q:
+        node = q.popleft()
+        order.append(node)
+
+        for nei in graph.get(node, []):
+            if nei not in visited:
+                visited.add(nei)
+                q.append(nei)
+
+    return order
+
+
+# Example
+graph = {
+    0: [1, 2],
+    1: [3],
+    2: [3, 4],
+    3: [5],
+    4: [],
+    5: [],
+}
+print(bfs_graph(graph, 0))  # [0, 1, 2, 3, 4, 5]
+```
+
+### 3. Shortest path in unweighted graph (BFS distance)
+
+For unweighted graphs, BFS finds the shortest number of edges from a start node to all others.
+
+```python
+from collections import deque
+
+
+def shortest_path_unweighted(graph: dict[int, list[int]], start: int) -> dict[int, int]:
+    """
+    Return distance (in edges) from start to each reachable node.
+    Unreachable nodes are absent from the result.
+    """
+    dist: dict[int, int] = {start: 0}
+    q: deque[int] = deque([start])
+
+    while q:
+        node = q.popleft()
+        for nei in graph.get(node, []):
+            if nei not in dist:
+                dist[nei] = dist[node] + 1
+                q.append(nei)
+
+    return dist
+
+
+# Example
+graph = {
+    0: [1, 2],
+    1: [3],
+    2: [3, 4],
+    3: [5],
+    4: [5],
+    5: [],
+}
+print(shortest_path_unweighted(graph, 0))  # {0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3}
+```
+
+### 4. Sliding window maximum with deque
+
+A **monotonic deque** (double-ended queue) can maintain candidates for the maximum in a sliding window in overall O(n) time.
+
+```python
+from collections import deque
+
+
+def sliding_window_max(nums: list[int], k: int) -> list[int]:
+    """
+    Return list of maximums for each window of size k.
+    Uses deque to store indices, maintaining decreasing values.
+    """
+    if not nums or k <= 0:
+        return []
+
+    dq: deque[int] = deque()  # indices, nums[dq] is decreasing
+    res: list[int] = []
+
+    for i, val in enumerate(nums):
+        # Remove indices that are out of this window
+        while dq and dq[0] <= i - k:
+            dq.popleft()
+
+        # Maintain decreasing order in deque
+        while dq and nums[dq[-1]] <= val:
+            dq.pop()
+
+        dq.append(i)
+
+        # The front of deque is max for window ending at i
+        if i >= k - 1:
+            res.append(nums[dq[0]])
+
+    return res
+
+
+# Example
+nums = [1, 3, -1, -3, 5, 3, 6, 7]
+print(sliding_window_max(nums, 3))  # [3, 3, 5, 5, 6, 7]
+```
+
+### 5. Implementing a stack using two queues
+
+Classic interview question: simulate LIFO stack behavior using only queue operations.
+
+```python
+from collections import deque
+
+
+class MyStack:
+    def __init__(self):
+        self.q1: deque[int] = deque()
+        self.q2: deque[int] = deque()
+
+    def push(self, x: int) -> None:
+        # Push to q2, then move all from q1 -> q2, then swap
+        self.q2.append(x)
+        while self.q1:
+            self.q2.append(self.q1.popleft())
+        self.q1, self.q2 = self.q2, self.q1
+
+    def pop(self) -> int:
+        return self.q1.popleft()
+
+    def top(self) -> int:
+        return self.q1[0]
+
+    def empty(self) -> bool:
+        return not self.q1
+
+
+# Example
+s = MyStack()
+s.push(1)
+s.push(2)
+print(s.top())  # 2
+print(s.pop())  # 2
+print(s.empty())  # False
+```
+
+### 6. Implementation patterns and notes
+
+| Pattern / Use case                    | Idea                                                                 |
+|---------------------------------------|----------------------------------------------------------------------|
+| BFS traversal                         | Use queue to process nodes level by level.                          |
+| Shortest path in unweighted graphs    | BFS distance with queue; each edge adds 1 to distance.              |
+| Sliding window (deque)                | Maintain candidates at ends; pop outdated or dominated elements.    |
+| Producer–consumer / task scheduling   | Queue tasks; workers dequeue and process in order.                  |
+| Simulating other structures           | Implement stack, priority queues, or schedulers using 1–2 queues.   |
+
+### Related sections and problems
+
+- Data structure details: [Fundamental Data Structures](#fundamental-data-structures) (Queue subsection).
+- Typical LeetCode problems: Number of Recent Calls, Time Needed to Buy Tickets, Rotting Oranges, Binary Tree Level Order Traversal, Sliding Window Maximum (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
