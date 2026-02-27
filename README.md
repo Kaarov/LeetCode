@@ -4638,100 +4638,135 @@ def count_components(n: int, edges: list[tuple[int, int]]) -> int:
 
 ## Dynamic Programming
 
-Explains the principle of optimal substructure and overlapping subproblems, illustrating how memoization and tabulation convert exponential recurrences into polynomial-time solutions. Highlights canonical problems such as knapsack, sequence alignment, and pathfinding in weighted DAGs.
+**Dynamic programming (DP)** solves problems by combining solutions to overlapping subproblems, using **optimal substructure** (an optimal solution contains optimal solutions to subproblems) and storing results to avoid recomputation. Implement via **memoization** (top-down, recursive with cache) or **tabulation** (bottom-up, fill a table in dependency order).
 
-### Key Concepts
-- Optimal Substructure
-- Overlapping Subproblems
-- Memoization vs Tabulation
-- State Space Reduction
-- 1D, 2D, and Multi-dimensional DP
+### When to use
 
-### Python Examples
+| Scenario | Consider DP when |
+|----------|-------------------|
+| **Count / optimize over choices** | Climbing stairs, unique paths, coin change (min coins). |
+| **Sequences** | Longest increasing subsequence (LIS), longest common subsequence (LCS), edit distance. |
+| **Subarray / substring** | Maximum sum subarray (Kadane), palindromic substring. |
+| **Partition / subset** | 0/1 knapsack, partition equal subset, word break. |
+| **State machine** | Buy/sell stock with cooldown, house robber (skip adjacent). |
 
-#### 1. Memoization (Top-Down)
+### Memoization vs tabulation
+
+| Approach | How | Pros | Cons |
+|----------|-----|------|------|
+| **Memoization** | Recursion + cache (e.g. `@lru_cache` or dict). | Only compute needed states; natural recurrence. | Stack depth; harder to optimize space. |
+| **Tabulation** | Iterate in order so dependencies are ready. | No stack; easy to reduce dimensions (e.g. 1D). | May fill more cells than needed. |
+
+### Complexity (typical)
+
+- **Time**: number of states × work per state (often O(1) per state) → e.g. O(n), O(n²), O(n·W).
+- **Space**: same as state dimension unless optimized (e.g. two rows or one row for 1D).
+
+### 1. Fibonacci (memoization and tabulation)
+
+Base: F(0)=0, F(1)=1; F(n)=F(n−1)+F(n−2). Classic example of overlapping subproblems.
+
 ```python
 from functools import lru_cache
 
 @lru_cache(maxsize=None)
-def fibonacci_memo(n):
-    """Fibonacci using memoization."""
+def fib_memo(n: int) -> int:
     if n <= 1:
         return n
-    return fibonacci_memo(n - 1) + fibonacci_memo(n - 2)
+    return fib_memo(n - 1) + fib_memo(n - 2)
 
-# Example: Calculate 10th Fibonacci number
-print(fibonacci_memo(10))  # 55
-```
-
-#### 2. Tabulation (Bottom-Up)
-```python
-def fibonacci_tab(n):
-    """Fibonacci using tabulation."""
+def fib_tab(n: int) -> int:
     if n <= 1:
         return n
-    
-    dp = [0] * (n + 1)
-    dp[1] = 1
-    
-    for i in range(2, n + 1):
-        dp[i] = dp[i - 1] + dp[i - 2]
-    
-    return dp[n]
+    a, b = 0, 1
+    for _ in range(2, n + 1):
+        a, b = b, a + b
+    return b
 
-# Example: Calculate 10th Fibonacci number
-print(fibonacci_tab(10))  # 55
+print(fib_memo(10), fib_tab(10))  # 55 55
 ```
 
-#### 3. 1D DP - Climbing Stairs
+### 2. Climbing stairs (1D DP)
+
+Ways to reach step n: from n−1 (one step) or n−2 (two steps): `dp[n] = dp[n-1] + dp[n-2]`.
+
 ```python
-def climb_stairs(n):
-    """Number of ways to climb n stairs (1 or 2 steps at a time)."""
+def climb_stairs(n: int) -> int:
     if n <= 2:
         return n
-    
-    dp = [0] * (n + 1)
-    dp[1] = 1
-    dp[2] = 2
-    
-    for i in range(3, n + 1):
-        dp[i] = dp[i - 1] + dp[i - 2]
-    
-    return dp[n]
-
-# Example: Ways to climb 5 stairs
-print(climb_stairs(5))  # 8
+    a, b = 1, 2
+    for _ in range(3, n + 1):
+        a, b = b, a + b
+    return b
 ```
 
-#### 4. 2D DP - Longest Common Subsequence
+### 3. Coin change (minimum number of coins)
+
+`dp[a]` = minimum coins to make amount a. For each coin c: `dp[a] = min(dp[a], 1 + dp[a-c])`.
+
 ```python
-def longest_common_subsequence(text1, text2):
-    """Find length of longest common subsequence."""
+def coin_change(coins: list[int], amount: int) -> int:
+    if amount == 0:
+        return 0
+    dp = [float("inf")] * (amount + 1)
+    dp[0] = 0
+    for a in range(1, amount + 1):
+        for c in coins:
+            if c <= a:
+                dp[a] = min(dp[a], 1 + dp[a - c])
+    return dp[amount] if dp[amount] != float("inf") else -1
+
+print(coin_change([1, 2, 5], 11))  # 3 (5+5+1)
+```
+
+### 4. Longest increasing subsequence (LIS)
+
+`dp[i]` = length of LIS ending at index i. For each i, consider all j < i with nums[j] < nums[i]: `dp[i] = 1 + max(dp[j])`.
+
+```python
+def length_of_lis(nums: list[int]) -> int:
+    if not nums:
+        return 0
+    n = len(nums)
+    dp = [1] * n
+    for i in range(1, n):
+        for j in range(i):
+            if nums[j] < nums[i]:
+                dp[i] = max(dp[i], dp[j] + 1)
+    return max(dp)
+
+print(length_of_lis([10, 9, 2, 5, 3, 7, 101, 18]))  # 4
+```
+
+### 5. Longest common subsequence (LCS)
+
+`dp[i][j]` = LCS length of text1[:i] and text2[:j]. Match: `dp[i-1][j-1]+1`; else `max(dp[i-1][j], dp[i][j-1])`.
+
+```python
+def longest_common_subsequence(text1: str, text2: str) -> int:
     m, n = len(text1), len(text2)
     dp = [[0] * (n + 1) for _ in range(m + 1)]
-    
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             if text1[i - 1] == text2[j - 1]:
                 dp[i][j] = dp[i - 1][j - 1] + 1
             else:
                 dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
-    
     return dp[m][n]
 
-# Example: LCS of "abcde" and "ace"
-print(longest_common_subsequence("abcde", "ace"))  # 3 ("ace")
+print(longest_common_subsequence("abcde", "ace"))  # 3
 ```
 
-#### 5. Knapsack Problem
+### 6. 0/1 Knapsack
+
+`dp[i][w]` = max value using first i items and capacity w. Either skip item i or take it: `dp[i][w] = max(dp[i-1][w], dp[i-1][w-wi] + vi)`.
+
 ```python
-def knapsack(weights, values, capacity):
-    """0/1 Knapsack problem using DP."""
+def knapsack_01(weights: list[int], values: list[int], capacity: int) -> int:
     n = len(weights)
     dp = [[0] * (capacity + 1) for _ in range(n + 1)]
-    
     for i in range(1, n + 1):
-        for w in range(1, capacity + 1):
+        for w in range(capacity + 1):
             if weights[i - 1] <= w:
                 dp[i][w] = max(
                     dp[i - 1][w],
@@ -4739,18 +4774,91 @@ def knapsack(weights, values, capacity):
                 )
             else:
                 dp[i][w] = dp[i - 1][w]
-    
     return dp[n][capacity]
 
-# Example: Knapsack with capacity 7
-weights = [1, 3, 4, 5]
-values = [1, 4, 5, 7]
-capacity = 7
-print(knapsack(weights, values, capacity))  # 9
+weights, values = [1, 3, 4, 5], [1, 4, 5, 7]
+print(knapsack_01(weights, values, 7))  # 9
 ```
 
-### Related Problems
-*See [Solved Problems Index](#solved-problems-index) for implementations*
+### 7. House robber (no two adjacent)
+
+`dp[i]` = max money from houses 0..i. Either skip i: `dp[i-1]`, or take i: `nums[i] + dp[i-2]`.
+
+```python
+def rob(nums: list[int]) -> int:
+    if not nums:
+        return 0
+    if len(nums) == 1:
+        return nums[0]
+    a, b = nums[0], max(nums[0], nums[1])
+    for i in range(2, len(nums)):
+        a, b = b, max(b, nums[i] + a)
+    return b
+```
+
+### 8. Maximum sum subarray (Kadane)
+
+`dp[i]` = max sum of subarray ending at i: either extend previous (`dp[i-1] + nums[i]`) or start fresh (`nums[i]`).
+
+```python
+def max_subarray_sum(nums: list[int]) -> int:
+    if not nums:
+        return 0
+    best = cur = nums[0]
+    for x in nums[1:]:
+        cur = max(x, cur + x)
+        best = max(best, cur)
+    return best
+```
+
+### 9. Unique paths (2D grid)
+
+Paths to (i, j): from (i−1, j) or (i, j−1): `dp[i][j] = dp[i-1][j] + dp[i][j-1]`. Can reduce to 1D.
+
+```python
+def unique_paths(m: int, n: int) -> int:
+    row = [1] * n
+    for _ in range(1, m):
+        for j in range(1, n):
+            row[j] += row[j - 1]
+    return row[-1]
+```
+
+### 10. Edit distance (Levenshtein)
+
+`dp[i][j]` = min edits to turn word1[:i] into word2[:j]. Insert, delete, or replace.
+
+```python
+def min_distance(word1: str, word2: str) -> int:
+    m, n = len(word1), len(word2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    for i in range(m + 1):
+        dp[i][0] = i
+    for j in range(n + 1):
+        dp[0][j] = j
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if word1[i - 1] == word2[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1]
+            else:
+                dp[i][j] = 1 + min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+    return dp[m][n]
+```
+
+### Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **State definition** | Define `dp[...]` clearly (e.g. “best value for first i items and capacity w”). |
+| **Base cases** | Initialize boundaries (e.g. empty sequence, zero capacity). |
+| **Order** | In tabulation, iterate so dependencies are already computed. |
+| **Space** | Often only the last row or two rows are needed; use 1D or two arrays. |
+| **Indexing** | Use 1-based dp and 0-based input (e.g. `dp[i][j]` for prefix up to index i−1). |
+
+### Related sections and problems
+
+- Paradigms: [Algorithm Design Paradigms](#algorithm-design-paradigms). Greedy: [Greedy Algorithms](#greedy-algorithms).
+- LeetCode-style problems: Climbing Stairs, Coin Change, Longest Increasing Subsequence, Longest Common Subsequence, 0/1 Knapsack, House Robber, Maximum Subarray, Unique Paths, Edit Distance (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
