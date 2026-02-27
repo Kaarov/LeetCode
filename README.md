@@ -29,31 +29,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 18. [Tree Algorithm](#tree-algorithm)
 19. [Binary Tree Algorithm](#binary-tree-algorithm)
 20. [DFS Algorithm](#dfs-algorithm)
-21. [Sorting Algorithms](#sorting-algorithms)
-22. [Searching Algorithms](#searching-algorithms)
-23. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-24. [Array Algorithms](#array-algorithms)
-25. [Graph Algorithms](#graph-algorithms)
+21. [BFS Algorithm](#bfs-algorithm)
+22. [Sorting Algorithms](#sorting-algorithms)
+23. [Searching Algorithms](#searching-algorithms)
+24. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+25. [Array Algorithms](#array-algorithms)
+26. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-26. [Fundamental Data Structures](#fundamental-data-structures)
+27. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-27. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-28. [Optimization Techniques](#optimization-techniques)
-29. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-30. [Cryptographic Algorithms](#cryptographic-algorithms)
-31. [Data Compression Algorithms](#data-compression-algorithms)
-32. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-33. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-34. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-35. [Specialized Application Algorithms](#specialized-application-algorithms)
+28. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+29. [Optimization Techniques](#optimization-techniques)
+30. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+31. [Cryptographic Algorithms](#cryptographic-algorithms)
+32. [Data Compression Algorithms](#data-compression-algorithms)
+33. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+34. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+35. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+36. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-36. [Solved Problems Index](#solved-problems-index)
+37. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-37. [Further Reading and Study Resources](#further-reading-and-study-resources)
+38. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -3438,6 +3439,249 @@ def postorder(root: "TreeNode | None") -> list[int]:
 - BFS and shortest paths: [Graph Algorithms](#graph-algorithms).
 - Backtracking paradigms: [Algorithm Design Paradigms](#algorithm-design-paradigms).
 - LeetCode-style problems: Number of Islands, Clone Graph, Course Schedule, Subsets, Permutations, Word Search (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## BFS Algorithm
+
+**Breadth-First Search (BFS)** explores all nodes at the current depth (or distance) before moving to the next level. It is implemented with a **queue** (FIFO): process a node, then enqueue its neighbors. BFS naturally gives **shortest path** (in number of edges) in unweighted graphs and **level-order** traversal in trees.
+
+### When to use
+
+| Scenario | Use BFS when |
+|----------|----------------|
+| **Shortest path (unweighted)** | Minimum number of edges from source to target. |
+| **Level order** | Process tree/graph by layers (e.g. binary tree level-order). |
+| **Nearest reachable** | Find closest node satisfying a condition (e.g. nearest 0 in a matrix). |
+| **Multi-source** | Start from multiple nodes (e.g. all 0s); first time a node is reached is shortest. |
+| **Topological sort (Kahn)** | Process nodes by in-degree; no DFS stack. |
+
+### Complexity (typical)
+
+| Setting | Time | Space |
+|---------|------|--------|
+| Tree, n nodes | O(n) | O(w) queue, w = max level width |
+| Graph, V vertices, E edges | O(V + E) | O(V) visited + queue |
+| 2D grid R×C | O(R·C) | O(R·C) or O(min(R,C)) for queue |
+
+### 1. BFS on graph (adjacency list)
+
+Enqueue start; while queue not empty, dequeue, mark visited, enqueue unvisited neighbors.
+
+```python
+from collections import deque
+
+def bfs_graph(graph: dict, start: int) -> list[int]:
+    """BFS traversal; returns nodes in level order."""
+    visited = set()
+    queue = deque([start])
+    result = []
+    while queue:
+        node = queue.popleft()
+        if node in visited:
+            continue
+        visited.add(node)
+        result.append(node)
+        for neighbor in graph.get(node, []):
+            if neighbor not in visited:
+                queue.append(neighbor)
+    return result
+
+graph = {0: [1, 2], 1: [2], 2: [0, 3], 3: [3]}
+print(bfs_graph(graph, 2))  # [2, 0, 3, 1]
+```
+
+### 2. Shortest path (unweighted): distance from source
+
+Run BFS; when we first enqueue a node, that is a shortest path. Track distances by adding 1 when pushing neighbors.
+
+```python
+def shortest_path_lengths(graph: dict, start: int) -> dict[int, int]:
+    """Distance (number of edges) from start to each reachable node."""
+    dist = {start: 0}
+    queue = deque([start])
+    while queue:
+        node = queue.popleft()
+        d = dist[node]
+        for neighbor in graph.get(node, []):
+            if neighbor not in dist:
+                dist[neighbor] = d + 1
+                queue.append(neighbor)
+    return dist
+```
+
+### 3. Shortest path: reconstruct path to target
+
+Keep a parent (or predecessor) map; when you first reach the target, backtrack via parents to build the path.
+
+```python
+def shortest_path_to_target(graph: dict, start: int, target: int) -> list[int] | None:
+    """One shortest path from start to target (list of nodes), or None."""
+    if start == target:
+        return [start]
+    parent: dict[int, int] = {}
+    queue = deque([start])
+    parent[start] = -1
+    while queue:
+        node = queue.popleft()
+        for neighbor in graph.get(node, []):
+            if neighbor in parent:
+                continue
+            parent[neighbor] = node
+            if neighbor == target:
+                path = []
+                cur = target
+                while cur != -1:
+                    path.append(cur)
+                    cur = parent[cur]
+                path.reverse()
+                return path
+            queue.append(neighbor)
+    return None
+```
+
+### 4. Level-order traversal of binary tree
+
+Process level by level: for each level, take current queue length, process that many nodes and enqueue their children.
+
+```python
+class TreeNode:
+    def __init__(self, val=0, left=None, right=None):
+        self.val = val
+        self.left = left
+        self.right = right
+
+def level_order(root: TreeNode | None) -> list[list[int]]:
+    """Return list of levels (each level is a list of values)."""
+    if not root:
+        return []
+    result: list[list[int]] = []
+    queue = deque([root])
+    while queue:
+        level = []
+        for _ in range(len(queue)):
+            node = queue.popleft()
+            level.append(node.val)
+            if node.left:
+                queue.append(node.left)
+            if node.right:
+                queue.append(node.right)
+        result.append(level)
+    return result
+```
+
+### 5. BFS on 2D grid (shortest path in maze)
+
+Move in 4 (or 8) directions; state is (r, c). Track visited and distance; first time reaching (tr, tc) gives shortest path.
+
+```python
+def shortest_path_grid(grid: list[list[int]], start: tuple[int, int], target: tuple[int, int]) -> int:
+    """Shortest path length (steps) in grid; -1 if blocked (1) or unreachable. 0 = allowed."""
+    R, C = len(grid), len(grid[0])
+    sr, sc = start
+    tr, tc = target
+    if grid[sr][sc] == 1 or grid[tr][tc] == 1:
+        return -1
+    visited = {(sr, sc)}
+    queue = deque([(sr, sc, 0)])
+    while queue:
+        r, c, steps = queue.popleft()
+        if (r, c) == (tr, tc):
+            return steps
+        for dr, dc in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < R and 0 <= nc < C and grid[nr][nc] == 0 and (nr, nc) not in visited:
+                visited.add((nr, nc))
+                queue.append((nr, nc, steps + 1))
+    return -1
+```
+
+### 6. Multi-source BFS (e.g. distance from nearest 0)
+
+Initialize queue with all “source” cells (e.g. all 0s); run BFS. First time a cell is reached, that is its distance to the nearest source.
+
+```python
+def update_matrix(mat: list[list[int]]) -> list[list[int]]:
+    """For each cell, distance to nearest 0. 0s are sources."""
+    R, C = len(mat), len(mat[0])
+    queue = deque()
+    for r in range(R):
+        for c in range(C):
+            if mat[r][c] == 0:
+                queue.append((r, c))
+            else:
+                mat[r][c] = -1
+    while queue:
+        r, c = queue.popleft()
+        d = mat[r][c] if mat[r][c] >= 0 else 0
+        for dr, dc in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < R and 0 <= nc < C and mat[nr][nc] == -1:
+                mat[nr][nc] = d + 1
+                queue.append((nr, nc))
+    return mat
+```
+
+### 7. Topological sort (Kahn's algorithm)
+
+Repeatedly remove nodes with in-degree 0; add to order and reduce in-degree of neighbors. Use a queue for current in-degree-0 nodes.
+
+```python
+def topological_sort_kahn(graph: dict) -> list[int]:
+    """Topological order via in-degree; returns empty list if cycle."""
+    in_degree = {v: 0 for v in graph}
+    for v in graph:
+        for u in graph[v]:
+            in_degree[u] = in_degree.get(u, 0) + 1
+    queue = deque([v for v in graph if in_degree[v] == 0])
+    order = []
+    while queue:
+        node = queue.popleft()
+        order.append(node)
+        for neighbor in graph.get(node, []):
+            in_degree[neighbor] -= 1
+            if in_degree[neighbor] == 0:
+                queue.append(neighbor)
+    return order if len(order) == len(graph) else []
+```
+
+### 8. Number of levels / depth (tree or graph from source)
+
+BFS with level counting: each “wave” is one level; increment depth when finishing a level.
+
+```python
+def max_depth_bfs(root: TreeNode | None) -> int:
+    """Max depth of binary tree via BFS (number of levels)."""
+    if not root:
+        return 0
+    depth = 0
+    queue = deque([root])
+    while queue:
+        depth += 1
+        for _ in range(len(queue)):
+            node = queue.popleft()
+            if node.left:
+                queue.append(node.left)
+            if node.right:
+                queue.append(node.right)
+    return depth
+```
+
+### Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Queue** | Use `collections.deque` and `popleft()`; avoid list.pop(0) (O(n)). |
+| **Visited** | Mark when enqueueing (or when dequeuing, but then allow duplicates in queue); be consistent. |
+| **Level-by-level** | For “level” semantics, use `for _ in range(len(queue))` in the inner loop. |
+| **Shortest path** | Only in **unweighted** graphs; for weights use [Graph Algorithms](#graph-algorithms) (e.g. Dijkstra). |
+| **Multi-source** | Initialize queue with all sources; same BFS gives “distance to nearest source”. |
+
+### Related sections and problems
+
+- DFS: [DFS Algorithm](#dfs-algorithm). Trees: [Tree Algorithm](#tree-algorithm), [Binary Tree Algorithm](#binary-tree-algorithm).
+- Weighted shortest paths: [Graph Algorithms](#graph-algorithms) (Dijkstra, etc.).
+- LeetCode-style problems: Binary Tree Level Order Traversal, Shortest Path in Binary Matrix, 01 Matrix, Course Schedule II, Rotting Oranges (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
