@@ -17,31 +17,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 6. [Stack Algorithms](#stack-algorithms)
 7. [Queue Algorithms](#queue-algorithms)
 8. [Heap Algorithms](#heap-algorithms)
-9. [Sorting Algorithms](#sorting-algorithms)
-10. [Searching Algorithms](#searching-algorithms)
-11. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-12. [Array Algorithms](#array-algorithms)
-13. [Graph Algorithms](#graph-algorithms)
+9. [String Algorithms](#string-algorithms)
+10. [Sorting Algorithms](#sorting-algorithms)
+11. [Searching Algorithms](#searching-algorithms)
+12. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+13. [Array Algorithms](#array-algorithms)
+14. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-14. [Fundamental Data Structures](#fundamental-data-structures)
+15. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-15. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-16. [Optimization Techniques](#optimization-techniques)
-17. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-18. [Cryptographic Algorithms](#cryptographic-algorithms)
-19. [Data Compression Algorithms](#data-compression-algorithms)
-20. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-21. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-22. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-23. [Specialized Application Algorithms](#specialized-application-algorithms)
+16. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+17. [Optimization Techniques](#optimization-techniques)
+18. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+19. [Cryptographic Algorithms](#cryptographic-algorithms)
+20. [Data Compression Algorithms](#data-compression-algorithms)
+21. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+22. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+23. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+24. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-24. [Solved Problems Index](#solved-problems-index)
+25. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-25. [Further Reading and Study Resources](#further-reading-and-study-resources)
+26. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -964,6 +965,227 @@ print(mf.find_median())  # 3.0
 - Data structure details: [Fundamental Data Structures](#fundamental-data-structures) (Heap subsection).
 - Sorting: [Sorting Algorithms](#sorting-algorithms) (heap sort).
 - Typical LeetCode problems: Kth Largest Element, Merge K Sorted Lists, Find Median from Data Stream, Top K Frequent Elements, Last Stone Weight (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## String Algorithms
+
+**String algorithms** deal with sequences of characters: comparison, search, transformation, and pattern matching. In Python, strings are **immutable**; repeated concatenation is O(n²). Prefer building with a list and `''.join()` for O(n) when assembling large strings.
+
+### Operations and complexity (typical)
+
+| Operation              | Time (Python) | Notes |
+|------------------------|---------------|--------|
+| Index / slice          | O(1) / O(k)   | k = slice length. |
+| Length                 | O(1)          | |
+| Concatenate two        | O(n + m)      | New string allocated. |
+| `in` (substring)       | O(n × m)      | Naive; use KMP for O(n + m). |
+| Iteration              | O(n)          | |
+| Build via list + join  | O(n)          | Prefer over repeated `+=`. |
+
+### When to use
+
+- **Two pointers**: palindromes, compare from both ends, valid strings.
+- **Sliding window**: longest substring with at most K distinct, max vowels in window, etc.
+- **Hashing / frequency**: anagrams, first unique character, character counts.
+- **Stack**: nested structures, valid parentheses, decode string.
+- **Pattern matching**: substring search (see [String Processing and Pattern Matching](#string-processing-and-pattern-matching) for KMP/Rabin–Karp).
+
+### 1. Reversal and palindrome
+
+```python
+def reverse_string(s: str) -> str:
+    return s[::-1]
+
+def is_palindrome(s: str) -> bool:
+    """Ignore non-alphanumeric, case-insensitive."""
+    cleaned = ''.join(c.lower() for c in s if c.isalnum())
+    return cleaned == cleaned[::-1]
+
+def reverse_words(s: str) -> str:
+    """Reverse order of words; keep spaces as in original spacing."""
+    return ' '.join(s.split()[::-1])
+
+# Examples
+print(reverse_string("hello"))                    # "olleh"
+print(is_palindrome("A man a plan a canal Panama"))  # True
+print(reverse_words("the sky is blue"))           # "blue is sky the"
+```
+
+### 2. Anagrams (frequency-based)
+
+```python
+from collections import Counter
+
+def is_anagram(s: str, t: str) -> bool:
+    return Counter(s) == Counter(t)
+
+def group_anagrams(strs: list[str]) -> list[list[str]]:
+    groups: dict[tuple, list[str]] = {}
+    for w in strs:
+        key = tuple(sorted(w))
+        groups.setdefault(key, []).append(w)
+    return list(groups.values())
+
+# Examples
+print(is_anagram("listen", "silent"))   # True
+print(group_anagrams(["eat", "tea", "tan", "ate", "nat", "bat"]))
+# [['eat', 'tea', 'ate'], ['tan', 'nat'], ['bat']]
+```
+
+### 3. First unique character
+
+```python
+from collections import Counter
+
+def first_uniq_char(s: str) -> int:
+    """Return index of first non-repeating character, or -1."""
+    freq = Counter(s)
+    for i, c in enumerate(s):
+        if freq[c] == 1:
+            return i
+    return -1
+
+# Example
+print(first_uniq_char("leetcode"))   # 0 ('l')
+print(first_uniq_char("aabb"))       # -1
+```
+
+### 4. Longest substring without repeating characters (sliding window)
+
+```python
+def length_of_longest_substring(s: str) -> int:
+    """Length of longest substring with all distinct characters."""
+    seen: set[str] = set()
+    left = 0
+    best = 0
+    for right, c in enumerate(s):
+        while c in seen:
+            seen.discard(s[left])
+            left += 1
+        seen.add(c)
+        best = max(best, right - left + 1)
+    return best
+
+# Examples
+print(length_of_longest_substring("abcabcbb"))  # 3 ("abc")
+print(length_of_longest_substring("bbbbb"))     # 1
+print(length_of_longest_substring("pwwkew"))    # 3 ("wke")
+```
+
+### 5. Maximum vowels in substring of length K (fixed window)
+
+```python
+VOWELS = set("aeiou")
+
+def max_vowels(s: str, k: int) -> int:
+    n = len(s)
+    if k > n:
+        k = n
+    count = sum(1 for c in s[:k] if c in VOWELS)
+    best = count
+    for i in range(k, n):
+        if s[i - k] in VOWELS:
+            count -= 1
+        if s[i] in VOWELS:
+            count += 1
+        best = max(best, count)
+    return best
+
+# Example
+print(max_vowels("abciiidef", 3))   # 3 ("iii")
+print(max_vowels("aeiou", 2))       # 2
+```
+
+### 6. Valid parentheses (stack)
+
+```python
+def is_valid_parens(s: str) -> bool:
+    pair = {')': '(', ']': '[', '}': '{'}
+    stack: list[str] = []
+    for c in s:
+        if c in '([{':
+            stack.append(c)
+        elif c in ')]}':
+            if not stack or stack[-1] != pair[c]:
+                return False
+            stack.pop()
+    return not stack
+
+# Examples
+print(is_valid_parens("()[]{}"))   # True
+print(is_valid_parens("(]"))       # False
+```
+
+### 7. String building (efficient)
+
+```python
+def build_large_string(chars: list[str]) -> str:
+    """O(n) instead of repeated += which would be O(n^2)."""
+    return ''.join(chars)
+
+def compress(chars: list[str]) -> int:
+    """In-place run-length encode; return new length. Example: ['a','a','b','b','c'] -> ['a','2','b','2','c']."""
+    n = len(chars)
+    write = 0
+    i = 0
+    while i < n:
+        c = chars[i]
+        count = 0
+        while i < n and chars[i] == c:
+            count += 1
+            i += 1
+        chars[write] = c
+        write += 1
+        if count > 1:
+            for d in str(count):
+                chars[write] = d
+                write += 1
+    return write
+
+# Example
+arr = ['a', 'a', 'b', 'b', 'b', 'c']
+new_len = compress(arr)
+print(new_len, arr[:new_len])  # 5 ['a', '2', 'b', '3', 'c']
+```
+
+### 8. Two pointers: valid palindrome / compare
+
+```python
+def is_palindrome_two_pointers(s: str) -> bool:
+    """O(1) extra space; ignore non-alphanumeric, case-insensitive."""
+    i, j = 0, len(s) - 1
+    while i < j:
+        while i < j and not s[i].isalnum():
+            i += 1
+        while i < j and not s[j].isalnum():
+            j -= 1
+        if i < j and s[i].lower() != s[j].lower():
+            return False
+        i += 1
+        j -= 1
+    return True
+
+# Example
+print(is_palindrome_two_pointers("A man a plan a canal Panama"))  # True
+```
+
+### 9. Implementation notes and patterns
+
+| Pattern / Use case              | Idea                                                                 |
+|---------------------------------|----------------------------------------------------------------------|
+| Building long strings           | Use list of parts then `''.join(parts)` for O(n).                    |
+| Anagrams / character counts    | `Counter(s)` or fixed-size list for limited alphabet.               |
+| Sliding window (variable)      | Two indices; expand right, shrink left to satisfy invariant.        |
+| Sliding window (fixed length K)| Maintain window of size K; update count when shifting by 1.          |
+| Nested / balanced              | Stack: push open, pop on close; invalid if mismatch or stack non-empty at end. |
+| Two pointers                   | Start both ends or same end; move based on comparison.               |
+
+### Related sections and problems
+
+- Pattern matching (KMP, Rabin–Karp): [String Processing and Pattern Matching](#string-processing-and-pattern-matching).
+- Data structures: [Fundamental Data Structures](#fundamental-data-structures).
+- Typical LeetCode problems: Valid Palindrome, Valid Parentheses, Longest Substring Without Repeating Characters, Group Anagrams, First Unique Character, String Compression, Decode String (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
