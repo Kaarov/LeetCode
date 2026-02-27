@@ -24,31 +24,32 @@ A comprehensive reference intended to mirror the structure and clarity of a univ
 13. [Prefix Sum Algorithm](#prefix-sum-algorithm)
 14. [Counting Sort Algorithm](#counting-sort-algorithm)
 15. [Merge Sort Algorithm](#merge-sort-algorithm)
-16. [Sorting Algorithms](#sorting-algorithms)
-17. [Searching Algorithms](#searching-algorithms)
-18. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
-19. [Array Algorithms](#array-algorithms)
-20. [Graph Algorithms](#graph-algorithms)
+16. [Two Pointers Algorithm](#two-pointers-algorithm)
+17. [Sorting Algorithms](#sorting-algorithms)
+18. [Searching Algorithms](#searching-algorithms)
+19. [String Processing and Pattern Matching](#string-processing-and-pattern-matching)
+20. [Array Algorithms](#array-algorithms)
+21. [Graph Algorithms](#graph-algorithms)
 
 ### Part III: Data Structures
-21. [Fundamental Data Structures](#fundamental-data-structures)
+22. [Fundamental Data Structures](#fundamental-data-structures)
 
 ### Part IV: Specialized Domains
-22. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
-23. [Optimization Techniques](#optimization-techniques)
-24. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
-25. [Cryptographic Algorithms](#cryptographic-algorithms)
-26. [Data Compression Algorithms](#data-compression-algorithms)
-27. [Computational Geometry Algorithms](#computational-geometry-algorithms)
-28. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
-29. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
-30. [Specialized Application Algorithms](#specialized-application-algorithms)
+23. [Numerical and Scientific Algorithms](#numerical-and-scientific-algorithms)
+24. [Optimization Techniques](#optimization-techniques)
+25. [Machine Learning and Data Analysis Algorithms](#machine-learning-and-data-analysis-algorithms)
+26. [Cryptographic Algorithms](#cryptographic-algorithms)
+27. [Data Compression Algorithms](#data-compression-algorithms)
+28. [Computational Geometry Algorithms](#computational-geometry-algorithms)
+29. [Parallel and Distributed Algorithms](#parallel-and-distributed-algorithms)
+30. [Constraint Solving and Logic-Based Algorithms](#constraint-solving-and-logic-based-algorithms)
+31. [Specialized Application Algorithms](#specialized-application-algorithms)
 
 ### Part V: Practice Problems
-31. [Solved Problems Index](#solved-problems-index)
+32. [Solved Problems Index](#solved-problems-index)
 
 ### Part VI: Resources
-32. [Further Reading and Study Resources](#further-reading-and-study-resources)
+33. [Further Reading and Study Resources](#further-reading-and-study-resources)
 
 ---
 
@@ -2428,6 +2429,209 @@ print(arr)  # [3, 9, 10, 27, 38, 43, 82]
 - Other sorts: [Sorting Algorithms](#sorting-algorithms), [Counting Sort Algorithm](#counting-sort-algorithm).
 - Divide and conquer: [Algorithm Design Paradigms](#algorithm-design-paradigms).
 - Typical LeetCode problems: Sort an Array, Merge Two Sorted Lists, Count of Smaller Numbers After Self (merge-sort idea), Reverse Pairs (see [Solved Problems Index](#solved-problems-index)).
+
+---
+
+## Two Pointers Algorithm
+
+The **two pointers** technique uses two indices (or pointers) that move through a sequence—often in one pass—to satisfy a condition or scan a range. Typical setups: **opposite ends** (left/right toward the center), **same direction** (both advance, possibly at different speeds), or **fast/slow** (e.g. cycle detection, middle of list). Many problems become **O(n)** time and **O(1)** extra space.
+
+### Common variants
+
+| Variant | Movement | Typical use |
+|---------|----------|-------------|
+| **Opposite ends** | `left` from start, `right` from end; move toward center | Sorted array two sum, palindrome, pair with target |
+| **Same direction** | Both advance; one may “lag” to skip or collect | Remove duplicates in place, move zeroes, partition |
+| **Fast/slow** | Slow +1, fast +2 (or similar) | Middle of list, cycle detection |
+| **Sliding window** | Two indices define a window; expand/shrink by moving one or both | Subarray with sum, longest substring (see [String Algorithms](#string-algorithms)) |
+
+### When to use
+
+- **Sorted array** or **sorted structure**: opposite-end pointers to find pairs or triples.
+- **In-place** removal or partition: same-direction write pointer + read pointer.
+- **Palindrome** or **symmetry**: left/right from both ends.
+- **Linked list** middle or cycle: fast/slow pointers.
+- **Merge** two sorted sequences: two pointers (one per sequence).
+
+### 1. Two sum in sorted array (opposite ends)
+
+Find two indices such that `arr[i] + arr[j] == target`. Move `left` right if sum is too small, `right` left if too large.
+
+```python
+def two_sum_sorted(arr: list[int], target: int) -> list[int]:
+    """Return [i, j] such that arr[i] + arr[j] == target. 0-indexed. Exactly one solution assumed."""
+    left, right = 0, len(arr) - 1
+    while left < right:
+        s = arr[left] + arr[right]
+        if s == target:
+            return [left, right]
+        if s < target:
+            left += 1
+        else:
+            right -= 1
+    return []
+
+# Example
+print(two_sum_sorted([2, 7, 11, 15], 9))   # [0, 1]
+print(two_sum_sorted([1, 2, 3, 4, 6], 6))   # [1, 3]
+```
+
+### 2. Remove duplicates in place (same direction)
+
+Keep a **write** pointer; only write when the current value is different from the last written (or use a “last seen” value). Return new length.
+
+```python
+def remove_duplicates_inplace(nums: list[int]) -> int:
+    """Remove duplicates in place (sorted non-decreasing). Return new length."""
+    if not nums:
+        return 0
+    write = 1
+    for read in range(1, len(nums)):
+        if nums[read] != nums[write - 1]:
+            nums[write] = nums[read]
+            write += 1
+    return write
+
+# Example
+arr = [1, 1, 2, 2, 3, 4, 4, 4]
+n = remove_duplicates_inplace(arr)
+print(n, arr[:n])  # 4 [1, 2, 3, 4]
+```
+
+### 3. Move zeroes to the end (same direction)
+
+One pointer scans; one points to the next position to place a non-zero. Swap or assign, then advance.
+
+```python
+def move_zeroes(nums: list[int]) -> None:
+    """Move all 0s to the end while preserving relative order of non-zero elements."""
+    write = 0
+    for read in range(len(nums)):
+        if nums[read] != 0:
+            nums[write], nums[read] = nums[read], nums[write]
+            write += 1
+
+# Example
+arr = [0, 1, 0, 3, 12]
+move_zeroes(arr)
+print(arr)  # [1, 3, 12, 0, 0]
+```
+
+### 4. Valid palindrome (opposite ends)
+
+Ignore non-alphanumeric; compare from both ends. Move pointers past non-alphanumeric, then compare (case-insensitive).
+
+```python
+def is_palindrome(s: str) -> bool:
+    i, j = 0, len(s) - 1
+    while i < j:
+        while i < j and not s[i].isalnum():
+            i += 1
+        while i < j and not s[j].isalnum():
+            j -= 1
+        if i < j and s[i].lower() != s[j].lower():
+            return False
+        i += 1
+        j -= 1
+    return True
+
+# Example
+print(is_palindrome("A man a plan a canal Panama"))  # True
+print(is_palindrome("race a car"))                   # False
+```
+
+### 5. Container with most water (opposite ends)
+
+Height at indices `i` and `j`; width = `j - i`. Move the pointer at the **shorter** height inward (greedy: we can’t improve by moving the taller one).
+
+```python
+def max_area(height: list[int]) -> int:
+    left, right = 0, len(height) - 1
+    best = 0
+    while left < right:
+        w = right - left
+        h = min(height[left], height[right])
+        best = max(best, w * h)
+        if height[left] <= height[right]:
+            left += 1
+        else:
+            right -= 1
+    return best
+
+# Example
+print(max_area([1, 8, 6, 2, 5, 4, 8, 3, 7]))  # 49
+```
+
+### 6. Is subsequence (two sequences, same direction)
+
+One pointer per string. Advance the text pointer every step; advance the pattern pointer only when characters match. True if pattern pointer reaches the end.
+
+```python
+def is_subsequence(pattern: str, text: str) -> bool:
+    """True if pattern is a subsequence of text."""
+    p = 0
+    for t in range(len(text)):
+        if p < len(pattern) and text[t] == pattern[p]:
+            p += 1
+    return p == len(pattern)
+
+# Example
+print(is_subsequence("ace", "abcde"))   # True
+print(is_subsequence("aec", "abcde"))   # False
+```
+
+### 7. Merge two sorted arrays (two pointers, one per array)
+
+Same idea as merge in merge sort: two indices, append the smaller (or equal from first for stability), then append the rest.
+
+```python
+def merge_sorted(a: list[int], b: list[int]) -> list[int]:
+    i = j = 0
+    out = []
+    while i < len(a) and j < len(b):
+        if a[i] <= b[j]:
+            out.append(a[i])
+            i += 1
+        else:
+            out.append(b[j])
+            j += 1
+    out.extend(a[i:])
+    out.extend(b[j:])
+    return out
+
+# Example
+print(merge_sorted([1, 3, 5], [2, 4, 6]))  # [1, 2, 3, 4, 5, 6]
+```
+
+### 8. Fast/slow: find middle of linked list
+
+Slow advances by 1, fast by 2. When fast reaches the end, slow is at the middle (or second middle for even length).
+
+```python
+# Assume ListNode with .next
+def middle_node(head: "ListNode | None") -> "ListNode | None":
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+    return slow
+```
+
+### 9. Implementation notes and pitfalls
+
+| Topic | Recommendation |
+|--------|-----------------|
+| **Bounds** | For opposite ends use `left < right` (or `left <= right` if same index can be valid). |
+| **Order of moves** | In “move zeroes” / partition, advance write only after placing; in two sum, move the pointer that improves the condition. |
+| **Stability** | When merging or choosing “which pointer to move,” use `<=` to prefer the left/first sequence for stability. |
+| **Fast/slow** | Check `fast and fast.next` before advancing to avoid None access. |
+| **Palindrome** | Skip non-alphanumeric inside the loop; compare case-insensitively. |
+
+### Related sections and problems
+
+- Sliding window (variable/fixed): [String Algorithms](#string-algorithms), [Array Algorithms](#array-algorithms).
+- Linked list: [Linked List Algorithm](#linked-list-algorithm).
+- Typical LeetCode problems: Two Sum II, Remove Duplicates from Sorted Array, Move Zeroes, Valid Palindrome, Container With Most Water, Is Subsequence, Merge Two Sorted Lists (see [Solved Problems Index](#solved-problems-index)).
 
 ---
 
